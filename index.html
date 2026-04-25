@@ -8,10 +8,12 @@ let grafico;
 
 let historicoPreco=[];
 
-/* ================= PREÇO REAL ================= */
+/* ================= PREÇO ================= */
 async function getPreco(ativo){
 
-if(!ativo.includes("/")) return 0;
+try{
+
+if(!ativo.includes("/")) return null;
 
 let base = ativo.split("/")[0];
 let quote = ativo.split("/")[1];
@@ -22,11 +24,20 @@ let res = await fetch(url);
 let data = await res.json();
 
 return data.rates[quote];
+
+}catch(e){
+console.log("erro preço");
+return null;
+}
+
 }
 
 /* ================= GRAFICO ================= */
 function iniciarGrafico(){
-const ctx=document.getElementById('grafico');
+
+let ctx=document.getElementById('grafico');
+
+if(!ctx) return;
 
 grafico=new Chart(ctx,{
 type:'line',
@@ -35,7 +46,6 @@ labels:[],
 datasets:[{
 data:[],
 borderColor:'#d4af37',
-backgroundColor:'rgba(212,175,55,0.2)',
 borderWidth:2,
 tension:0.4
 }]
@@ -48,6 +58,7 @@ y:{ticks:{color:'#d4af37'}}
 }
 }
 });
+
 }
 
 /* ================= IA ================= */
@@ -55,42 +66,34 @@ function analisarIA(){
 
 if(historicoPreco.length < 5) return null;
 
-/* últimos preços */
-let p1 = historicoPreco[historicoPreco.length-1];
-let p2 = historicoPreco[historicoPreco.length-2];
-let p3 = historicoPreco[historicoPreco.length-3];
-let p4 = historicoPreco[historicoPreco.length-4];
+let p1 = historicoPreco.at(-1);
+let p2 = historicoPreco.at(-2);
+let p3 = historicoPreco.at(-3);
+let p4 = historicoPreco.at(-4);
 
-/* direção */
 let tendenciaAlta = p1 > p2 && p2 > p3;
 let tendenciaBaixa = p1 < p2 && p2 < p3;
 
-/* força */
 let movimento = Math.abs(p1 - p4);
 
-/* filtro lateral */
 if(movimento < 0.0005) return null;
 
-/* probabilidade */
-let prob = (movimento * 100000).toFixed(0);
+let prob = movimento * 100000;
 
 if(prob > 95) prob = 95;
 if(prob < 55) return null;
 
-/* decisão */
-if(tendenciaAlta){
-return {acao:"CALL", prob:prob};
-}
-
-if(tendenciaBaixa){
-return {acao:"PUT", prob:prob};
-}
+if(tendenciaAlta) return {acao:"CALL", prob:prob};
+if(tendenciaBaixa) return {acao:"PUT", prob:prob};
 
 return null;
 }
 
 /* ================= START ================= */
 function start(){
+
+clearInterval(loop);
+
 loop=setInterval(async ()=>{
 
 let ativo=document.getElementById("ativo").value;
@@ -100,11 +103,12 @@ let preco = await getPreco(ativo);
 if(!preco) return;
 
 /* mostrar preço */
-document.getElementById("preco").innerText = preco.toFixed(5);
+let precoEl=document.getElementById("preco");
+if(precoEl) precoEl.innerText = preco.toFixed(5);
 
-/* salvar histórico */
+/* histórico */
 historicoPreco.push(preco);
-if(historicoPreco.length > 50) historicoPreco.shift();
+if(historicoPreco.length>50) historicoPreco.shift();
 
 /* IA */
 let sinal = analisarIA();
@@ -141,20 +145,32 @@ clearInterval(loop);
 
 /* ================= UPDATE ================= */
 function update(){
-document.getElementById("saldo").innerText=saldo;
-document.getElementById("saldo2").innerText=saldo;
-document.getElementById("lucro").innerText=saldo-1000;
+
+let saldoEl=document.getElementById("saldo");
+let saldo2El=document.getElementById("saldo2");
+let lucroEl=document.getElementById("lucro");
+
+if(saldoEl) saldoEl.innerText=saldo;
+if(saldo2El) saldo2El.innerText=saldo;
+if(lucroEl) lucroEl.innerText=saldo-1000;
 
 let total=wins+loss;
 let pct=total?((wins/total)*100).toFixed(1):0;
 
-document.getElementById("win").innerText=pct+"%";
-document.getElementById("wins").innerText=wins;
-document.getElementById("loss").innerText=loss;
+let winEl=document.getElementById("win");
+let winsEl=document.getElementById("wins");
+let lossEl=document.getElementById("loss");
+
+if(winEl) winEl.innerText=pct+"%";
+if(winsEl) winsEl.innerText=wins;
+if(lossEl) lossEl.innerText=loss;
+
 }
 
 /* ================= GRAFICO ================= */
 function updateChart(preco){
+
+if(!grafico) return;
 
 grafico.data.labels.push("");
 grafico.data.datasets[0].data.push(preco);
@@ -169,17 +185,20 @@ grafico.update();
 
 /* ================= TABELA ================= */
 function addTabela(h,a,r){
+
 let tabela=document.getElementById("tabela");
+if(!tabela) return;
 
 let linha=`
 <tr>
 <td>${h}</td>
 <td>${a}</td>
-<td class="${r=="WIN"?"win":"loss"}">${r}</td>
+<td style="color:${r=="WIN"?"lime":"red"}">${r}</td>
 </tr>
 `;
 
 tabela.innerHTML+=linha;
+
 }
 
 window.onload=iniciarGrafico;
