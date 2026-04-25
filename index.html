@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<title>LAURO TRADER PRO</title>
+<title>LAURO TRADER CANDLES</title>
 
 <style>
 body{margin:0;background:#000;color:#d4af37;font-family:Arial;display:flex}
@@ -11,8 +11,6 @@ body{margin:0;background:#000;color:#d4af37;font-family:Arial;display:flex}
 .menu div{margin:18px 0;font-size:18px}
 .conta{margin-top:60px;border:1px solid #d4af37;border-radius:10px;padding:20px}
 .main{flex:1;padding:35px}
-.top{display:flex;justify-content:space-between;align-items:center}
-.criar{background:#d4af37;color:#000;border:0;padding:12px 25px;border-radius:8px;font-weight:bold}
 .cards{display:grid;grid-template-columns:repeat(5,1fr);gap:15px;margin-top:25px}
 .card{border:1px solid #d4af37;border-radius:10px;padding:18px;background:#080808}
 .controls{margin:25px 0}
@@ -22,11 +20,11 @@ button{border:0;padding:12px 30px;border-radius:8px;font-weight:bold;cursor:poin
 select{background:#111;color:#d4af37;border:1px solid #d4af37;padding:10px;border-radius:8px}
 .grid{display:grid;grid-template-columns:2fr 1fr;gap:20px}
 .box{border:1px solid #d4af37;border-radius:12px;padding:20px;background:#080808}
-canvas{width:100%;height:350px;background:#020202;border-radius:8px}
+canvas{width:100%;height:430px;background:#020202;border-radius:8px}
 table{width:100%;font-size:14px}
 td{padding:6px}
-.win{color:#00ff66}
-.loss{color:red}
+.alta{color:#00ff66}
+.baixa{color:red}
 .neutro{color:#aaa}
 </style>
 </head>
@@ -47,17 +45,14 @@ td{padding:6px}
   <div class="conta">
     Conta Demo<br><br>
     <b>R$ <span id="saldoLateral">1000</span></b><br><br>
-    Preço Real<br>
+    Preço Atual<br>
     <b id="precoAtual">0.00</b>
   </div>
 </div>
 
 <div class="main">
 
-  <div class="top">
-    <h1>Dashboard</h1>
-    <button class="criar">+ Criar Novo Robô</button>
-  </div>
+  <h1>Dashboard</h1>
 
   <div class="cards">
     <div class="card">Saldo<br><b id="saldo">1000</b></div>
@@ -76,19 +71,27 @@ td{padding:6px}
       <option value="SOLUSDT">SOL/USDT</option>
     </select>
 
+    Time:
+    <select id="tempo">
+      <option value="1m">1 Minuto</option>
+      <option value="5m">5 Minutos</option>
+      <option value="15m">15 Minutos</option>
+    </select>
+
     <button class="ligar" onclick="ligar()">Ligar Robô</button>
     <button class="parar" onclick="parar()">Parar</button>
+
     <span id="status" style="margin-left:20px;">Aguardando...</span>
   </div>
 
   <div class="grid">
     <div class="box">
-      <h2>Gráfico de Preço Real</h2>
-      <canvas id="grafico" width="900" height="350"></canvas>
+      <h2>Candles Reais</h2>
+      <canvas id="grafico" width="1000" height="430"></canvas>
     </div>
 
     <div class="box">
-      <h2>Últimas Operações</h2>
+      <h2>Últimas Análises</h2>
       <table>
         <tbody id="historico"></tbody>
       </table>
@@ -104,25 +107,150 @@ let vitorias = 0;
 let derrotas = 0;
 let rodando = false;
 let intervalo = null;
-let pontos = [];
+let candles = [];
 
-let metaLucro = 80;
-let stopLoss = -60;
-let historicoPreco = [];
-
-async function buscarPrecoReal(){
+async function buscarCandles(){
   try{
     let ativo = document.getElementById("ativo").value;
-    let url = "https://api.binance.com/api/v3/ticker/price?symbol=" + ativo;
+    let tempo = document.getElementById("tempo").value;
+
+    let url = "https://api.binance.com/api/v3/klines?symbol=" + ativo + "&interval=" + tempo + "&limit=60";
+
     let resposta = await fetch(url);
     let dados = await resposta.json();
 
-    if(!dados.price) return null;
+    candles = dados.map(c => ({
+      time: c[0],
+      open: parseFloat(c[1]),
+      high: parseFloat(c[2]),
+      low: parseFloat(c[3]),
+      close: parseFloat(c[4])
+    }));
 
-    return parseFloat(dados.price);
+    let ultimo = candles[candles.length - 1];
+    document.getElementById("precoAtual").innerText = ultimo.close.toFixed(2);
+
+    desenharCandles();
+    analisarMercado();
+
   }catch(e){
-    return null;
+    document.getElementById("status").innerText = "Erro ao buscar candles reais";
   }
+}
+
+function desenharCandles(){
+  let canvas = document.getElementById("grafico");
+  let ctx = canvas.getContext("2d");
+
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle = "#020202";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+
+  if(candles.length === 0) return;
+
+  let highs = candles.map(c => c.high);
+  let lows = candles.map(c => c.low);
+
+  let max = Math.max(...highs);
+  let min = Math.min(...lows);
+
+  let margem = (max - min) * 0.1;
+  max += margem;
+  min -= margem;
+
+  ctx.strokeStyle = "#222";
+  ctx.lineWidth = 1;
+
+  for(let i=0;i<10;i++){
+    let y = (canvas.height / 10) * i;
+    ctx.beginPath();
+    ctx.moveTo(0,y);
+    ctx.lineTo(canvas.width,y);
+    ctx.stroke();
+  }
+
+  let candleWidth = canvas.width / candles.length;
+  let corpoWidth = candleWidth * 0.55;
+
+  candles.forEach((c, i) => {
+    let x = i * candleWidth + candleWidth / 2;
+
+    let yOpen = escala(c.open, min, max, canvas.height);
+    let yClose = escala(c.close, min, max, canvas.height);
+    let yHigh = escala(c.high, min, max, canvas.height);
+    let yLow = escala(c.low, min, max, canvas.height);
+
+    let alta = c.close >= c.open;
+
+    ctx.strokeStyle = alta ? "#00ff66" : "#ff3333";
+    ctx.fillStyle = alta ? "#00ff66" : "#ff3333";
+
+    ctx.beginPath();
+    ctx.moveTo(x, yHigh);
+    ctx.lineTo(x, yLow);
+    ctx.stroke();
+
+    let topo = Math.min(yOpen, yClose);
+    let altura = Math.abs(yClose - yOpen);
+
+    if(altura < 2) altura = 2;
+
+    ctx.fillRect(x - corpoWidth/2, topo, corpoWidth, altura);
+  });
+}
+
+function escala(valor, min, max, altura){
+  return altura - ((valor - min) / (max - min)) * altura;
+}
+
+function analisarMercado(){
+  if(candles.length < 5) return;
+
+  let c1 = candles[candles.length - 1];
+  let c2 = candles[candles.length - 2];
+  let c3 = candles[candles.length - 3];
+
+  let direcao = "AGUARDAR";
+  let classe = "neutro";
+
+  if(c1.close > c1.open && c2.close > c2.open && c3.close > c3.open){
+    direcao = "CALL";
+    classe = "alta";
+  }
+
+  if(c1.close < c1.open && c2.close < c2.open && c3.close < c3.open){
+    direcao = "PUT";
+    classe = "baixa";
+  }
+
+  adicionarHistorico(direcao, classe);
+
+  if(direcao === "AGUARDAR") return;
+
+  let ganhou = Math.random() < 0.62;
+
+  if(ganhou){
+    saldo += 10;
+    vitorias++;
+  }else{
+    saldo -= 10;
+    derrotas++;
+  }
+
+  atualizarTela();
+}
+
+function adicionarHistorico(direcao, classe){
+  let historico = document.getElementById("historico");
+  let hora = new Date().toLocaleTimeString();
+  let ativo = document.getElementById("ativo").value;
+
+  historico.innerHTML =
+    `<tr>
+      <td>${hora}</td>
+      <td>${ativo}</td>
+      <td class="${classe}">${direcao}</td>
+    </tr>` + historico.innerHTML;
 }
 
 function atualizarTela(){
@@ -137,145 +265,22 @@ function atualizarTela(){
   let total = vitorias + derrotas;
   let wr = total > 0 ? ((vitorias / total) * 100).toFixed(1) : 0;
   document.getElementById("winrate").innerText = wr + "%";
-
-  desenharGrafico();
-
-  if(lucro >= metaLucro){
-    parar();
-    document.getElementById("status").innerText = "Meta atingida ✅";
-  }
-
-  if(lucro <= stopLoss){
-    parar();
-    document.getElementById("status").innerText = "Stop atingido ❌";
-  }
-}
-
-function desenharGrafico(){
-  let canvas = document.getElementById("grafico");
-  let ctx = canvas.getContext("2d");
-
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  ctx.fillStyle = "#020202";
-  ctx.fillRect(0,0,canvas.width,canvas.height);
-
-  ctx.strokeStyle = "#222";
-  ctx.lineWidth = 1;
-
-  for(let i=0;i<10;i++){
-    let y = i * 35;
-    ctx.beginPath();
-    ctx.moveTo(0,y);
-    ctx.lineTo(canvas.width,y);
-    ctx.stroke();
-  }
-
-  if(pontos.length < 2) return;
-
-  let min = Math.min(...pontos);
-  let max = Math.max(...pontos);
-
-  if(min === max){
-    min = min - 1;
-    max = max + 1;
-  }
-
-  ctx.strokeStyle = "#d4af37";
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-
-  pontos.forEach((valor, i)=>{
-    let x = (i / (pontos.length - 1)) * canvas.width;
-    let y = canvas.height - ((valor - min) / (max - min)) * canvas.height;
-
-    if(i === 0) ctx.moveTo(x,y);
-    else ctx.lineTo(x,y);
-  });
-
-  ctx.stroke();
-}
-
-function inteligencia(){
-  if(historicoPreco.length < 5) return "AGUARDAR";
-
-  let p1 = historicoPreco[historicoPreco.length - 1];
-  let p2 = historicoPreco[historicoPreco.length - 2];
-  let p3 = historicoPreco[historicoPreco.length - 3];
-
-  let alta = p1 > p2 && p2 > p3;
-  let baixa = p1 < p2 && p2 < p3;
-
-  if(alta) return "CALL";
-  if(baixa) return "PUT";
-
-  return "AGUARDAR";
-}
-
-async function operar(){
-  let preco = await buscarPrecoReal();
-
-  if(!preco){
-    document.getElementById("status").innerText = "Erro ao buscar preço";
-    return;
-  }
-
-  document.getElementById("precoAtual").innerText = preco.toFixed(2);
-
-  historicoPreco.push(preco);
-  pontos.push(preco);
-
-  if(historicoPreco.length > 20) historicoPreco.shift();
-  if(pontos.length > 50) pontos.shift();
-
-  let sinal = inteligencia();
-
-  if(sinal === "AGUARDAR"){
-    adicionarHistorico("AGUARDAR", "neutro", "Sem entrada");
-    atualizarTela();
-    return;
-  }
-
-  let ganhou = Math.random() < 0.65;
-
-  if(ganhou){
-    saldo += 10;
-    vitorias++;
-    adicionarHistorico("WIN", "win", sinal);
-  }else{
-    saldo -= 10;
-    derrotas++;
-    adicionarHistorico("LOSS", "loss", sinal);
-  }
-
-  atualizarTela();
-}
-
-function adicionarHistorico(resultado, classe, direcao){
-  let historico = document.getElementById("historico");
-  let hora = new Date().toLocaleTimeString();
-  let ativo = document.getElementById("ativo").value;
-
-  historico.innerHTML =
-    `<tr>
-      <td>${hora}</td>
-      <td>${ativo}</td>
-      <td>${direcao}</td>
-      <td class="${classe}">${resultado}</td>
-    </tr>` + historico.innerHTML;
 }
 
 function ligar(){
   if(rodando) return;
 
   rodando = true;
-  document.getElementById("status").innerText = "Buscando preço real...";
+  document.getElementById("status").innerText = "Buscando candles reais...";
 
-  intervalo = setInterval(operar, 2000);
+  buscarCandles();
+  intervalo = setInterval(buscarCandles, 5000);
 }
 
 function parar(){
   rodando = false;
   clearInterval(intervalo);
+  document.getElementById("status").innerText = "Parado";
 }
 
 atualizarTela();
