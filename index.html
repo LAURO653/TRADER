@@ -50,7 +50,7 @@ Tempo:
 <button class="parar" onclick="parar()">PARAR</button>
 
 <p>Status: <b id="status">Parado</b></p>
-<p>Próxima análise: <b id="contador">--</b></p>
+<p>Próximo fechamento: <b id="contador">--</b></p>
 <p>Preço atual: <b id="preco">0.00</b></p>
 </div>
 
@@ -63,10 +63,9 @@ Tempo:
 <div class="card">
 <h2>COLE SEU SCRIPT AQUI</h2>
 <textarea id="codigo">
-// FORMATO ACEITO:
-// return "CALL";
-// return "PUT";
-// return "AGUARDAR";
+// SCRIPT PADRÃO
+// O testador usa candles FECHADOS.
+// Se retornar CALL/PUT, o resultado será medido no próximo candle fechado.
 
 let c1 = candles[candles.length - 1];
 let c2 = candles[candles.length - 2];
@@ -75,19 +74,26 @@ let c3 = candles[candles.length - 3];
 let corpo1 = Math.abs(c1.close - c1.open);
 let range1 = c1.high - c1.low;
 
+let corpo2 = Math.abs(c2.close - c2.open);
+let range2 = c2.high - c2.low;
+
+let candle1Forte = corpo1 > range1 * 0.35;
+let candle2Forte = corpo2 > range2 * 0.25;
+
 let alta1 = c1.close > c1.open;
 let alta2 = c2.close > c2.open;
 
 let baixa1 = c1.close < c1.open;
 let baixa2 = c2.close < c2.open;
 
-let candleForte = corpo1 > range1 * 0.35;
+let rompendoAlta = c1.close > c2.high || c1.close > c3.close;
+let rompendoBaixa = c1.close < c2.low || c1.close < c3.close;
 
-if(alta1 && candleForte && alta2){
+if(alta1 && candle1Forte && (alta2 || rompendoAlta)){
   return "CALL";
 }
 
-if(baixa1 && candleForte && baixa2){
+if(baixa1 && candle1Forte && (baixa2 || rompendoBaixa)){
   return "PUT";
 }
 
@@ -132,34 +138,53 @@ Loss: <b id="loss">0</b>
 </div>
 
 <script>
-let saldo=1000,wins=0,loss=0,loop=null,contadorLoop=null,rodando=false,candles=[];
-let segundosRestantes=0;
+let saldo=1000,wins=0,loss=0,rodando=false,candles=[];
+let timerAnalise=null,contadorLoop=null;
+let ultimaAnaliseTime=0;
+let operacaoPendente=null;
 
-function tempoEmSegundos(){
-  let tempo=document.getElementById("tempo").value;
-  if(tempo==="1m") return 60;
-  if(tempo==="3m") return 180;
-  if(tempo==="5m") return 300;
-  return 60;
+function tempoMs(){
+  let t=document.getElementById("tempo").value;
+  if(t==="1m") return 60000;
+  if(t==="3m") return 180000;
+  if(t==="5m") return 300000;
+  return 60000;
 }
 
-async function buscarCandles(){
+function proximoFechamentoMs(){
+  let agora=Date.now();
+  let periodo=tempoMs();
+  return Math.ceil(agora/periodo)*periodo + 2000;
+}
+
+function formatarHora(ms){
+  return new Date(ms).toLocaleTimeString();
+}
+
+async function buscarCandlesFechados(){
   let ativo=document.getElementById("ativo").value;
   let tempo=document.getElementById("tempo").value;
-  let url=`https://api.binance.com/api/v3/klines?symbol=${ativo}&interval=${tempo}&limit=50`;
+  let url=`https://api.binance.com/api/v3/klines?symbol=${ativo}&interval=${tempo}&limit=60`;
+
   let resposta=await fetch(url);
   let dados=await resposta.json();
+  let agora=Date.now();
 
-  candles=dados.map(c=>({
+  let lista=dados.map(c=>({
     time:c[0],
+    closeTime:c[6],
     open:parseFloat(c[1]),
     high:parseFloat(c[2]),
     low:parseFloat(c[3]),
     close:parseFloat(c[4])
   }));
 
+  candles=lista.filter(c=>c.closeTime < agora);
+
   let ultimo=candles[candles.length-1];
-  document.getElementById("preco").innerText=ultimo.close.toFixed(2);
+  if(ultimo){
+    document.getElementById("preco").innerText=ultimo.close.toFixed(2);
+  }
 }
 
 function executarScript(){
@@ -173,11 +198,12 @@ function executarScript(){
     }
 
     mostrarSinal(sinal);
-    simularResultado(sinal);
+    return sinal;
 
   }catch(e){
     document.getElementById("status").innerText="Erro no script";
     console.log(e);
+    return "AGUARDAR";
   }
 }
 
@@ -190,18 +216,96 @@ function mostrarSinal(sinal){
   document.getElementById("forca").innerText=forca+"%";
 }
 
-function simularResultado(sinal){
-  if(sinal==="AGUARDAR"){
-    addHist(sinal,"SEM ENTRADA");
-    return;
+function avaliarPendente(candleFechado){
+  if(!operacaoPendente) return;
+
+  let resultado="LOSS";
+
+  if(operacaoPendente.sinal==="CALL" && candleFechado.close > operacaoPendente.precoEntrada){
+    resultado="WIN";
   }
 
-  let win=Math.random()<0.62;
+  if(operacaoPendente.sinal==="PUT" && candleFechado.close < operacaoPendente.precoEntrada){
+    resultado="WIN";
+  }
 
-  if(win){saldo+=10;wins++;addHist(sinal,"WIN")}
-  else{saldo-=10;loss++;addHist(sinal,"LOSS")}
+  if(resultado==="WIN"){
+    saldo+=10;
+    wins++;
+  }else{
+    saldo-=10;
+    loss++;
+  }
 
+  addHist(
+    operacaoPendente.horaEntrada,
+    operacaoPendente.sinal,
+    resultado,
+    operacaoPendente.precoEntrada,
+    candleFechado.close
+  );
+
+  operacaoPendente=null;
   atualizar();
+}
+
+async function cicloReal(){
+  await buscarCandlesFechados();
+
+  if(candles.length<5) return;
+
+  let ultimo=candles[candles.length-1];
+
+  if(ultimo.closeTime===ultimaAnaliseTime) return;
+  ultimaAnaliseTime=ultimo.closeTime;
+
+  avaliarPendente(ultimo);
+
+  let sinal=executarScript();
+
+  if(sinal==="CALL" || sinal==="PUT"){
+    operacaoPendente={
+      sinal:sinal,
+      precoEntrada:ultimo.close,
+      horaEntrada:formatarHora(ultimo.closeTime)
+    };
+  }else{
+    addHist(formatarHora(ultimo.closeTime),"AGUARDAR","SEM ENTRADA",ultimo.close,ultimo.close);
+  }
+
+  agendarProxima();
+}
+
+function agendarProxima(){
+  clearTimeout(timerAnalise);
+
+  let proximo=proximoFechamentoMs();
+  let espera=proximo-Date.now();
+
+  timerAnalise=setTimeout(cicloReal,espera);
+}
+
+function iniciarContador(){
+  clearInterval(contadorLoop);
+
+  contadorLoop=setInterval(()=>{
+    let falta=Math.max(0,Math.ceil((proximoFechamentoMs()-Date.now())/1000));
+    document.getElementById("contador").innerText=falta+"s";
+  },1000);
+}
+
+function addHist(hora,sinal,resultado,entrada,saida){
+  let cor=resultado==="WIN"?"win":resultado==="LOSS"?"loss":"";
+
+  document.getElementById("hist").innerHTML=
+  `<tr>
+    <td>${hora}</td>
+    <td>${document.getElementById("ativo").value}</td>
+    <td>${document.getElementById("tempo").value}</td>
+    <td>${sinal}</td>
+    <td>${entrada.toFixed(2)} → ${saida.toFixed(2)}</td>
+    <td class="${cor}">${resultado}</td>
+  </tr>`+document.getElementById("hist").innerHTML;
 }
 
 function atualizar(){
@@ -215,46 +319,19 @@ function atualizar(){
   document.getElementById("wr").innerText=wr+"%";
 }
 
-function addHist(sinal,resultado){
-  let cor=resultado==="WIN"?"win":resultado==="LOSS"?"loss":"";
-  document.getElementById("hist").innerHTML=
-  `<tr>
-    <td>${new Date().toLocaleTimeString()}</td>
-    <td>${document.getElementById("ativo").value}</td>
-    <td>${document.getElementById("tempo").value}</td>
-    <td>${sinal}</td>
-    <td class="${cor}">${resultado}</td>
-  </tr>`+document.getElementById("hist").innerHTML;
-}
-
-async function ciclo(){
-  await buscarCandles();
-  executarScript();
-  segundosRestantes=tempoEmSegundos();
-}
-
 function ligar(){
   if(rodando) return;
 
   rodando=true;
-  document.getElementById("status").innerText="Rodando com mercado real";
+  document.getElementById("status").innerText="Rodando no fechamento real do candle";
 
-  ciclo();
-
-  let tempo=tempoEmSegundos()*1000;
-  loop=setInterval(ciclo,tempo);
-
-  segundosRestantes=tempoEmSegundos();
-  contadorLoop=setInterval(()=>{
-    segundosRestantes--;
-    if(segundosRestantes<0) segundosRestantes=0;
-    document.getElementById("contador").innerText=segundosRestantes+"s";
-  },1000);
+  cicloReal();
+  iniciarContador();
 }
 
 function parar(){
   rodando=false;
-  clearInterval(loop);
+  clearTimeout(timerAnalise);
   clearInterval(contadorLoop);
   document.getElementById("status").innerText="Parado";
   document.getElementById("contador").innerText="--";
@@ -344,6 +421,9 @@ function usarConvertido(){
   document.getElementById("codigo").value=document.getElementById("scriptConvertido").value;
   fecharConversor();
 }
+
+document.getElementById("ativo").addEventListener("change",()=>{if(rodando){parar();ligar();}});
+document.getElementById("tempo").addEventListener("change",()=>{if(rodando){parar();ligar();}});
 </script>
 
 </body>
