@@ -5,7 +5,6 @@
 <title>Lauro Trader</title>
 
 <style>
-
 body {
   margin:0;
   font-family:Arial;
@@ -17,105 +16,97 @@ body {
 /* MENU */
 .sidebar {
   width:220px;
-  background: linear-gradient(180deg,#000,#0a0a0a);
+  background:#000;
   height:100vh;
   padding:20px;
   border-right:1px solid rgba(212,175,55,0.4);
 }
-
 .sidebar h2 {
   color:#d4af37;
-  text-shadow:0 0 15px #d4af37;
+  text-shadow:0 0 10px #d4af37;
 }
-
-/* MENU ITEMS */
 .menu-item {
   margin:15px 0;
-  cursor:pointer;
   color:#aaa;
-  transition:0.3s;
+  cursor:pointer;
 }
 .menu-item:hover {
   color:#d4af37;
-  transform:translateX(5px);
 }
 
 /* MAIN */
 .main {
   flex:1;
-  padding:40px;
+  padding:30px;
+}
+
+/* TOPO */
+.topbar {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+.btn-top {
+  background:linear-gradient(45deg,#d4af37,#ffd700);
+  padding:10px 20px;
+  border-radius:8px;
+  color:black;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+/* METRICAS */
+.metrics {
+  display:flex;
+  gap:15px;
+  margin-top:20px;
+}
+.metric {
+  background:#111;
+  padding:15px;
+  border-radius:10px;
+  border:1px solid rgba(212,175,55,0.4);
+  min-width:120px;
+  text-align:center;
 }
 
 /* CARD */
 .card {
-  background: linear-gradient(145deg,#0a0a0a,#111);
-  width:420px;
-  margin:auto;
+  margin-top:20px;
+  background:#111;
   padding:20px;
   border-radius:15px;
-  border:1px solid rgba(212,175,55,0.5);
-  box-shadow:0 0 40px rgba(212,175,55,0.15);
+  border:1px solid rgba(212,175,55,0.4);
 }
 
-/* STATS */
-.stats {
+/* BOTÕES */
+.actions {
   display:flex;
-  justify-content:space-between;
+  gap:10px;
   margin-top:15px;
 }
-
-.box {
-  background:#000;
+.action-btn {
+  flex:1;
   padding:10px;
-  border-radius:10px;
-  width:80px;
-  text-align:center;
-  border:1px solid rgba(212,175,55,0.5);
-  box-shadow:0 0 10px rgba(212,175,55,0.2);
-}
-
-/* BUTTONS */
-button {
-  margin-top:10px;
-  padding:10px;
-  border:none;
   border-radius:8px;
-  font-weight:bold;
+  border:1px solid #d4af37;
+  text-align:center;
   cursor:pointer;
-  transition:0.3s;
 }
-
-.green {
-  background:linear-gradient(45deg,#d4af37,#ffd700);
+.active {
+  background:#d4af37;
   color:black;
-}
-.green:hover {
-  box-shadow:0 0 20px #d4af37;
-}
-
-.red {
-  background:#550000;
-  color:white;
-}
-.red:hover {
-  box-shadow:0 0 10px red;
-}
-
-/* STATUS */
-h3 {
-  text-shadow:0 0 5px rgba(255,255,255,0.2);
 }
 
 /* LOG */
 .log {
   margin-top:20px;
-  background:#000;
-  height:120px;
+  height:100px;
   overflow:auto;
+  background:#000;
   padding:10px;
   border-radius:10px;
-  border:1px solid rgba(212,175,55,0.5);
-  box-shadow: inset 0 0 10px rgba(212,175,55,0.2);
+  border:1px solid rgba(212,175,55,0.4);
 }
 
 </style>
@@ -125,7 +116,6 @@ h3 {
 
 <div class="sidebar">
 <h2>LAURO</h2>
-
 <div class="menu-item">📊 Dashboard</div>
 <div class="menu-item">🤖 Robôs</div>
 <div class="menu-item">📈 Sinais</div>
@@ -135,25 +125,33 @@ h3 {
 
 <div class="main">
 
+<div class="topbar">
 <h1>Dashboard</h1>
+<div class="btn-top">+ Criar Novo Robô</div>
+</div>
+
+<div class="metrics">
+<div class="metric">Saldo<br><b id="saldo">1000</b></div>
+<div class="metric">Lucro<br><b id="lucro">0</b></div>
+<div class="metric">Win Rate<br><b id="win">0%</b></div>
+<div class="metric">Vitórias<br><b id="wins">0</b></div>
+<div class="metric">Derrotas<br><b id="loss">0</b></div>
+</div>
 
 <div class="card">
 
-<h3>Conta Demo</h3>
+<h3>Polarium (Demo)</h3>
 
-<div class="stats">
-<div class="box">Saldo<br><b id="saldo">1000</b></div>
-<div class="box">Lucro<br><b id="lucro">0</b></div>
-<div class="box">Win<br><b id="win">0%</b></div>
+<div class="actions">
+<div class="action-btn">Logs</div>
+<div class="action-btn active">Dashboard</div>
+<div class="action-btn">Histórico</div>
 </div>
 
-<div class="stats">
-<div class="box">Win<br><b id="wins">0</b></div>
-<div class="box">Loss<br><b id="loss">0</b></div>
+<div class="actions">
+<div class="action-btn" onclick="start()">▶ Ligar</div>
+<div class="action-btn" onclick="stop()">⏹ Parar</div>
 </div>
-
-<button class="green" onclick="start()">Ligar</button>
-<button class="red" onclick="stop()">Desligar</button>
 
 <h3 id="status">Aguardando...</h3>
 
@@ -168,12 +166,12 @@ h3 {
 let saldo = 1000;
 let wins = 0;
 let loss = 0;
-let rodando = false;
 let loop;
+let rodando = false;
 
 function start(){
   rodando = true;
-  document.getElementById("status").innerText = "Rodando";
+  document.getElementById("status").innerText = "Rodando...";
 
   loop = setInterval(()=>{
     if(!rodando) return;
