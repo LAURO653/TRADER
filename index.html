@@ -5,10 +5,11 @@
 <title>Lauro Trader</title>
 
 <style>
+
 body {
   margin:0;
   font-family:Arial;
-  background: linear-gradient(135deg,#000000,#1a1a1a);
+  background: radial-gradient(circle at top, #111, #000);
   color:white;
   display:flex;
 }
@@ -16,24 +17,27 @@ body {
 /* MENU */
 .sidebar {
   width:220px;
-  background:#000;
+  background: linear-gradient(180deg,#000,#0a0a0a);
   height:100vh;
   padding:20px;
-  border-right:2px solid #d4af37;
+  border-right:1px solid rgba(212,175,55,0.4);
 }
 
 .sidebar h2 {
   color:#d4af37;
+  text-shadow:0 0 15px #d4af37;
 }
 
 /* MENU ITEMS */
 .menu-item {
   margin:15px 0;
   cursor:pointer;
-  color:#ccc;
+  color:#aaa;
+  transition:0.3s;
 }
 .menu-item:hover {
   color:#d4af37;
+  transform:translateX(5px);
 }
 
 /* MAIN */
@@ -44,12 +48,13 @@ body {
 
 /* CARD */
 .card {
-  background:#111;
+  background: linear-gradient(145deg,#0a0a0a,#111);
   width:420px;
   margin:auto;
   padding:20px;
   border-radius:15px;
-  border:1px solid #d4af37;
+  border:1px solid rgba(212,175,55,0.5);
+  box-shadow:0 0 40px rgba(212,175,55,0.15);
 }
 
 /* STATS */
@@ -65,7 +70,8 @@ body {
   border-radius:10px;
   width:80px;
   text-align:center;
-  border:1px solid #d4af37;
+  border:1px solid rgba(212,175,55,0.5);
+  box-shadow:0 0 10px rgba(212,175,55,0.2);
 }
 
 /* BUTTONS */
@@ -76,30 +82,43 @@ button {
   border-radius:8px;
   font-weight:bold;
   cursor:pointer;
+  transition:0.3s;
 }
 
 .green {
-  background:#d4af37;
+  background:linear-gradient(45deg,#d4af37,#ffd700);
   color:black;
+}
+.green:hover {
+  box-shadow:0 0 20px #d4af37;
 }
 
 .red {
   background:#550000;
   color:white;
 }
+.red:hover {
+  box-shadow:0 0 10px red;
+}
+
+/* STATUS */
+h3 {
+  text-shadow:0 0 5px rgba(255,255,255,0.2);
+}
 
 /* LOG */
 .log {
   margin-top:20px;
   background:#000;
-  height:100px;
+  height:120px;
   overflow:auto;
   padding:10px;
   border-radius:10px;
-  border:1px solid #d4af37;
+  border:1px solid rgba(212,175,55,0.5);
+  box-shadow: inset 0 0 10px rgba(212,175,55,0.2);
 }
-</style>
 
+</style>
 </head>
 
 <body>
@@ -145,6 +164,7 @@ button {
 </div>
 
 <script>
+
 let saldo = 1000;
 let wins = 0;
 let loss = 0;
@@ -197,6 +217,7 @@ function addLog(msg){
   let log = document.getElementById("log");
   log.innerHTML = msg + "<br>" + log.innerHTML;
 }
+
 </script>
 
 </body>
