@@ -1,200 +1,3 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-<meta charset="UTF-8">
-<title>LAURO TRADER</title>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-<style>
-
-body{
-margin:0;
-font-family:Arial;
-background:black;
-color:#d4af37;
-display:flex;
-}
-
-/* SIDEBAR */
-.sidebar{
-width:300px;
-background:linear-gradient(180deg,#000,#0a0a0a);
-border-right:2px solid #d4af37;
-padding:30px 20px;
-box-shadow: 5px 0 20px rgba(212,175,55,0.15);
-}
-
-/* LOGO */
-.logo{
-font-size:30px;
-font-weight:bold;
-margin-bottom:30px;
-letter-spacing:2px;
-}
-
-/* MENU */
-.menu div{
-margin:15px 0;
-padding:12px;
-border-radius:8px;
-cursor:pointer;
-transition:0.3s;
-}
-
-.menu div:hover{
-background:#d4af37;
-color:black;
-}
-
-/* CONTA */
-.conta{
-margin-top:40px;
-padding:20px;
-border:1px solid #d4af37;
-border-radius:10px;
-text-align:center;
-}
-
-/* MAIN */
-.main{
-flex:1;
-padding:30px;
-}
-
-/* CARDS */
-.top{
-display:flex;
-gap:15px;
-margin-bottom:20px;
-}
-
-.card{
-flex:1;
-border:1px solid #d4af37;
-padding:20px;
-text-align:center;
-border-radius:10px;
-}
-
-/* BOTÕES */
-.btn{
-padding:12px;
-margin:5px;
-border:none;
-cursor:pointer;
-border-radius:6px;
-}
-
-.start{background:green;color:white;}
-.stop{background:red;color:white;}
-
-/* LAYOUT */
-.content{
-display:flex;
-gap:20px;
-margin-top:20px;
-}
-
-.chart-box{
-flex:2;
-border:1px solid #d4af37;
-padding:15px;
-border-radius:10px;
-}
-
-.table-box{
-flex:1;
-border:1px solid #d4af37;
-padding:15px;
-border-radius:10px;
-max-height:450px;
-overflow:auto;
-}
-
-/* TABELA */
-table{
-width:100%;
-font-size:12px;
-}
-
-.win{color:lime;}
-.loss{color:red;}
-
-</style>
-
-</head>
-
-<body>
-
-<div class="sidebar">
-
-<div class="logo">LAURO</div>
-
-<div class="menu">
-<div>📊 Dashboard</div>
-<div>🤖 Robôs</div>
-<div>📈 Sinais</div>
-<div>🎓 Aulas</div>
-<div>💎 Planos</div>
-</div>
-
-<div class="conta">
-Conta Demo<br><br>
-<b style="font-size:18px;">R$ <span id="saldo">1000</span></b>
-</div>
-
-</div>
-
-<div class="main">
-
-<h2>Dashboard</h2>
-
-<div class="top">
-<div class="card">Saldo<br><span id="saldo2">1000</span></div>
-<div class="card">Lucro<br><span id="lucro">0</span></div>
-<div class="card">Win Rate<br><span id="win">0%</span></div>
-<div class="card">Vitórias<br><span id="wins">0</span></div>
-<div class="card">Derrotas<br><span id="loss">0</span></div>
-</div>
-
-<input id="ativo" placeholder="EUR/USD">
-<br><br>
-
-Preço atual: <b id="preco">0.00000</b>
-
-<br><br>
-
-<button class="btn start" onclick="start()">Ligar</button>
-<button class="btn stop" onclick="stop()">Parar</button>
-
-<div class="content">
-
-<div class="chart-box">
-<h3>Gráfico de Desempenho</h3>
-<canvas id="grafico"></canvas>
-</div>
-
-<div class="table-box">
-<h3>Últimas Operações</h3>
-
-<table>
-<thead>
-<tr>
-<th>Hora</th>
-<th>Ativo</th>
-<th>Resultado</th>
-</tr>
-</thead>
-<tbody id="tabela"></tbody>
-</table>
-
-</div>
-
-</div>
-
-</div>
-
 <script>
 
 let saldo=1000;
@@ -203,7 +6,9 @@ let loss=0;
 let loop;
 let grafico;
 
-/* PREÇO REAL */
+let historicoPreco=[];
+
+/* ================= PREÇO REAL ================= */
 async function getPreco(ativo){
 
 if(!ativo.includes("/")) return 0;
@@ -219,7 +24,7 @@ let data = await res.json();
 return data.rates[quote];
 }
 
-/* GRAFICO */
+/* ================= GRAFICO ================= */
 function iniciarGrafico(){
 const ctx=document.getElementById('grafico');
 
@@ -245,7 +50,46 @@ y:{ticks:{color:'#d4af37'}}
 });
 }
 
-/* START */
+/* ================= IA ================= */
+function analisarIA(){
+
+if(historicoPreco.length < 5) return null;
+
+/* últimos preços */
+let p1 = historicoPreco[historicoPreco.length-1];
+let p2 = historicoPreco[historicoPreco.length-2];
+let p3 = historicoPreco[historicoPreco.length-3];
+let p4 = historicoPreco[historicoPreco.length-4];
+
+/* direção */
+let tendenciaAlta = p1 > p2 && p2 > p3;
+let tendenciaBaixa = p1 < p2 && p2 < p3;
+
+/* força */
+let movimento = Math.abs(p1 - p4);
+
+/* filtro lateral */
+if(movimento < 0.0005) return null;
+
+/* probabilidade */
+let prob = (movimento * 100000).toFixed(0);
+
+if(prob > 95) prob = 95;
+if(prob < 55) return null;
+
+/* decisão */
+if(tendenciaAlta){
+return {acao:"CALL", prob:prob};
+}
+
+if(tendenciaBaixa){
+return {acao:"PUT", prob:prob};
+}
+
+return null;
+}
+
+/* ================= START ================= */
 function start(){
 loop=setInterval(async ()=>{
 
@@ -253,11 +97,22 @@ let ativo=document.getElementById("ativo").value;
 
 let preco = await getPreco(ativo);
 
-if(preco){
-document.getElementById("preco").innerText = preco.toFixed(5);
-}
+if(!preco) return;
 
-let r=Math.random()>0.45;
+/* mostrar preço */
+document.getElementById("preco").innerText = preco.toFixed(5);
+
+/* salvar histórico */
+historicoPreco.push(preco);
+if(historicoPreco.length > 50) historicoPreco.shift();
+
+/* IA */
+let sinal = analisarIA();
+
+if(sinal){
+
+let r = Math.random() < (sinal.prob/100);
+
 let hora=new Date().toLocaleTimeString();
 
 if(r){
@@ -270,18 +125,21 @@ loss++;
 addTabela(hora,ativo,"LOSS");
 }
 
+}
+
+/* atualizar */
 update();
 updateChart(preco);
 
 },2000);
 }
 
-/* STOP */
+/* ================= STOP ================= */
 function stop(){
 clearInterval(loop);
 }
 
-/* UPDATE */
+/* ================= UPDATE ================= */
 function update(){
 document.getElementById("saldo").innerText=saldo;
 document.getElementById("saldo2").innerText=saldo;
@@ -295,10 +153,8 @@ document.getElementById("wins").innerText=wins;
 document.getElementById("loss").innerText=loss;
 }
 
-/* GRAFICO */
+/* ================= GRAFICO ================= */
 function updateChart(preco){
-
-if(!preco) return;
 
 grafico.data.labels.push("");
 grafico.data.datasets[0].data.push(preco);
@@ -311,7 +167,7 @@ grafico.data.datasets[0].data.shift();
 grafico.update();
 }
 
-/* TABELA */
+/* ================= TABELA ================= */
 function addTabela(h,a,r){
 let tabela=document.getElementById("tabela");
 
@@ -329,6 +185,3 @@ tabela.innerHTML+=linha;
 window.onload=iniciarGrafico;
 
 </script>
-
-</body>
-</html>
