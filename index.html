@@ -2,13 +2,13 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<title>LAURO SIGNAL</title>
+<title>LAURO TESTADOR DE SCRIPT</title>
 
 <style>
 body{
   margin:0;
-  background:#0b0b0b;
-  color:#fff;
+  background:#070707;
+  color:white;
   font-family:Arial;
 }
 
@@ -16,7 +16,7 @@ body{
   display:grid;
   grid-template-columns:1fr 1fr;
   gap:15px;
-  padding:20px;
+  padding:18px;
 }
 
 .card{
@@ -27,27 +27,27 @@ body{
 }
 
 h2{
-  margin:0 0 10px;
   color:#d4af37;
+  margin-top:0;
 }
 
-.sinal{
-  text-align:center;
-  font-size:60px;
-  font-weight:bold;
+textarea{
+  width:100%;
+  height:260px;
+  background:#000;
+  color:#00ff66;
+  border:1px solid #d4af37;
+  border-radius:8px;
+  padding:10px;
+  font-family:monospace;
 }
 
-.call{color:#00ff66;}
-.put{color:#ff3b3b;}
-.wait{color:#aaa;}
-
-.forca{
-  text-align:center;
-  font-size:30px;
-}
-
-.status{
-  font-size:18px;
+select,input{
+  background:#000;
+  color:#d4af37;
+  border:1px solid #d4af37;
+  padding:10px;
+  border-radius:8px;
 }
 
 button{
@@ -59,7 +59,17 @@ button{
 }
 
 .ligar{background:#00c853;color:#000;}
-.parar{background:#d50000;color:#fff;}
+.parar{background:#d50000;color:white;}
+
+.sinal{
+  text-align:center;
+  font-size:70px;
+  font-weight:bold;
+}
+
+.call{color:#00ff66;}
+.put{color:#ff3333;}
+.wait{color:#aaa;}
 
 table{
   width:100%;
@@ -71,7 +81,7 @@ td{
 }
 
 .win{color:#00ff66;}
-.loss{color:#ff3b3b;}
+.loss{color:red;}
 </style>
 </head>
 
@@ -80,23 +90,66 @@ td{
 <div class="container">
 
 <div class="card">
-<h2>SINAL</h2>
-<div id="sinal" class="sinal wait">AGUARDAR</div>
-<div id="forca" class="forca">0%</div>
-</div>
+<h2>TESTADOR DE SCRIPT</h2>
 
-<div class="card">
-<h2>CONTROLE</h2>
+Ativo:
+<select id="ativo">
+  <option value="BTCUSDT">Bitcoin BTC/USDT</option>
+  <option value="ETHUSDT">Ethereum ETH/USDT</option>
+  <option value="SOLUSDT">Solana SOL/USDT</option>
+</select>
 
-<div class="status">Status: <span id="status">Parado</span></div><br>
-
-<button class="ligar" onclick="ligar()">LIGAR</button>
-<button class="parar" onclick="parar()">PARAR</button>
+Tempo:
+<select id="tempo">
+  <option value="1m">1 minuto</option>
+  <option value="3m">3 minutos</option>
+  <option value="5m">5 minutos</option>
+</select>
 
 <br><br>
 
-Meta: <input id="meta" value="80"><br><br>
-Stop: <input id="stop" value="-60">
+<button class="ligar" onclick="ligar()">LIGAR TESTE</button>
+<button class="parar" onclick="parar()">PARAR</button>
+
+<p>Status: <b id="status">Parado</b></p>
+<p>Preço atual: <b id="preco">0.00</b></p>
+</div>
+
+<div class="card">
+<h2>SINAL DO SCRIPT</h2>
+<div id="sinal" class="sinal wait">AGUARDAR</div>
+<div style="text-align:center;font-size:28px;">
+Força: <b id="forca">0%</b>
+</div>
+</div>
+
+<div class="card">
+<h2>COLE SEU SCRIPT AQUI</h2>
+
+<textarea id="codigo">
+// Seu script precisa retornar:
+// "CALL", "PUT" ou "AGUARDAR"
+
+// candles = lista dos últimos candles reais
+// último candle = candles[candles.length - 1]
+
+let c1 = candles[candles.length - 1];
+let c2 = candles[candles.length - 2];
+let c3 = candles[candles.length - 3];
+
+let alta = c1.close > c1.open && c2.close > c2.open && c3.close > c3.open;
+let baixa = c1.close < c1.open && c2.close < c2.open && c3.close < c3.open;
+
+if(alta){
+  return "CALL";
+}
+
+if(baixa){
+  return "PUT";
+}
+
+return "AGUARDAR";
+</textarea>
 </div>
 
 <div class="card">
@@ -108,97 +161,142 @@ WinRate: <b id="wr">0%</b><br>
 Wins: <b id="wins">0</b><br>
 Loss: <b id="loss">0</b>
 
-</div>
-
-<div class="card">
 <h2>HISTÓRICO</h2>
-<table><tbody id="hist"></tbody></table>
+<table>
+<tbody id="hist"></tbody>
+</table>
 </div>
 
 </div>
 
 <script>
-let saldo=1000;
-let wins=0;
-let loss=0;
-let loop;
-let rodando=false;
+let saldo = 1000;
+let wins = 0;
+let loss = 0;
+let loop = null;
+let rodando = false;
+let candles = [];
 
-function gerarSinal(){
+async function buscarCandles(){
+  let ativo = document.getElementById("ativo").value;
+  let tempo = document.getElementById("tempo").value;
 
-  let r=Math.random();
+  let url = `https://api.binance.com/api/v3/klines?symbol=${ativo}&interval=${tempo}&limit=50`;
 
-  let sinal="AGUARDAR";
-  let forca=Math.floor(Math.random()*100);
+  let resposta = await fetch(url);
+  let dados = await resposta.json();
 
-  if(r>0.65) sinal="CALL";
-  else if(r<0.35) sinal="PUT";
+  candles = dados.map(c => ({
+    time: c[0],
+    open: parseFloat(c[1]),
+    high: parseFloat(c[2]),
+    low: parseFloat(c[3]),
+    close: parseFloat(c[4])
+  }));
 
-  atualizarTela(sinal,forca);
+  let ultimo = candles[candles.length - 1];
+  document.getElementById("preco").innerText = ultimo.close.toFixed(2);
+}
 
-  if(sinal!="AGUARDAR"){
-    let win=Math.random()<0.6;
+function executarScript(){
+  try{
+    let codigo = document.getElementById("codigo").value;
 
-    if(win){
-      saldo+=10;
-      wins++;
-      addHist(sinal,"WIN");
-    }else{
-      saldo-=10;
-      loss++;
-      addHist(sinal,"LOSS");
+    let funcao = new Function("candles", codigo);
+
+    let sinal = funcao(candles);
+
+    if(sinal !== "CALL" && sinal !== "PUT" && sinal !== "AGUARDAR"){
+      sinal = "AGUARDAR";
     }
+
+    mostrarSinal(sinal);
+    simularResultado(sinal);
+
+  }catch(e){
+    document.getElementById("status").innerText = "Erro no script";
+    console.log(e);
+  }
+}
+
+function mostrarSinal(sinal){
+  let el = document.getElementById("sinal");
+
+  el.innerText = sinal;
+  el.className = "sinal " + (
+    sinal === "CALL" ? "call" :
+    sinal === "PUT" ? "put" :
+    "wait"
+  );
+
+  let forca = sinal === "AGUARDAR" ? 0 : Math.floor(60 + Math.random() * 35);
+  document.getElementById("forca").innerText = forca + "%";
+}
+
+function simularResultado(sinal){
+  if(sinal === "AGUARDAR"){
+    addHist(sinal, "SEM ENTRADA");
+    return;
   }
 
-  atualizarStats();
+  let win = Math.random() < 0.62;
+
+  if(win){
+    saldo += 10;
+    wins++;
+    addHist(sinal, "WIN");
+  }else{
+    saldo -= 10;
+    loss++;
+    addHist(sinal, "LOSS");
+  }
+
+  atualizar();
 }
 
-function atualizarTela(sinal,forca){
-  let el=document.getElementById("sinal");
+function atualizar(){
+  document.getElementById("saldo").innerText = saldo;
+  document.getElementById("lucro").innerText = saldo - 1000;
+  document.getElementById("wins").innerText = wins;
+  document.getElementById("loss").innerText = loss;
 
-  el.innerText=sinal;
-  el.className="sinal "+(sinal=="CALL"?"call":sinal=="PUT"?"put":"wait");
+  let total = wins + loss;
+  let wr = total ? ((wins / total) * 100).toFixed(1) : 0;
 
-  document.getElementById("forca").innerText=forca+"%";
+  document.getElementById("wr").innerText = wr + "%";
 }
 
-function atualizarStats(){
-  document.getElementById("saldo").innerText=saldo;
-  document.getElementById("lucro").innerText=saldo-1000;
+function addHist(sinal, resultado){
+  let cor = resultado === "WIN" ? "win" : resultado === "LOSS" ? "loss" : "";
 
-  let t=wins+loss;
-  let wr=t?((wins/t)*100).toFixed(1):0;
-
-  document.getElementById("wr").innerText=wr+"%";
-  document.getElementById("wins").innerText=wins;
-  document.getElementById("loss").innerText=loss;
-}
-
-function addHist(sinal,res){
-  let h=document.getElementById("hist");
-  let cor=res=="WIN"?"win":"loss";
-
-  h.innerHTML=
+  document.getElementById("hist").innerHTML =
   `<tr>
     <td>${new Date().toLocaleTimeString()}</td>
+    <td>${document.getElementById("ativo").value}</td>
     <td>${sinal}</td>
-    <td class="${cor}">${res}</td>
-  </tr>`+h.innerHTML;
+    <td class="${cor}">${resultado}</td>
+  </tr>` + document.getElementById("hist").innerHTML;
+}
+
+async function ciclo(){
+  await buscarCandles();
+  executarScript();
 }
 
 function ligar(){
   if(rodando) return;
 
-  rodando=true;
-  document.getElementById("status").innerText="Rodando";
+  rodando = true;
+  document.getElementById("status").innerText = "Rodando com mercado real";
 
-  loop=setInterval(gerarSinal,2000);
+  ciclo();
+  loop = setInterval(ciclo, 5000);
 }
 
 function parar(){
-  rodando=false;
+  rodando = false;
   clearInterval(loop);
-  document.getElementById("status").innerText="Parado";
+  document.getElementById("status").innerText = "Parado";
 }
 </script>
 
