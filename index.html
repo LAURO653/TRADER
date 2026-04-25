@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <title>Robô Trader</title>
+</head>
+
+<body style="background:#0f172a; color:white; text-align:center; padding:50px; font-family:Arial;">
+
+<h1>🚀 Robô Trader</h1>
+
+<input id="ativo" placeholder="Digite o ativo">
+<br><br>
+
+<textarea id="script" placeholder="Cole seu script aqui" rows="5" cols="40"></textarea>
+
+<br><br>
+
+<button onclick="executar()">Executar Robô</button>
+
+<h2 id="status">Aguardando...</h2>
+
+<script>
+function executar() {
+  let ativo = document.getElementById("ativo").value;
+  let script = document.getElementById("script").value;
+
+  if(!ativo || !script){
+    document.getElementById("status").innerText = "Preencha tudo!";
+    return;
+  }
+
+  document.getElementById("status").innerText = "Executando em " + ativo;
+
+  setTimeout(()=>{
+    document.getElementById("status").innerText = "Operação concluída 🚀";
+  },2000);
+}
+</script>
+
+</body>
+</html>
