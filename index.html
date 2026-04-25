@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<title>LAURO TESTADOR DE SCRIPT</title>
+<title>LAURO TESTADOR PRO</title>
 
 <style>
 body{
@@ -33,13 +33,14 @@ h2{
 
 textarea{
   width:100%;
-  height:260px;
+  height:250px;
   background:#000;
   color:#00ff66;
   border:1px solid #d4af37;
   border-radius:8px;
   padding:10px;
   font-family:monospace;
+  box-sizing:border-box;
 }
 
 select,input{
@@ -56,10 +57,13 @@ button{
   border-radius:8px;
   font-weight:bold;
   cursor:pointer;
+  margin:3px;
 }
 
 .ligar{background:#00c853;color:#000;}
 .parar{background:#d50000;color:white;}
+.converter{background:#d4af37;color:#000;}
+.copy{background:#333;color:white;}
 
 .sinal{
   text-align:center;
@@ -82,6 +86,41 @@ td{
 
 .win{color:#00ff66;}
 .loss{color:red;}
+
+.modal{
+  display:none;
+  position:fixed;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background:rgba(0,0,0,0.85);
+  z-index:999;
+}
+
+.modal-content{
+  background:#111;
+  border:2px solid #d4af37;
+  border-radius:12px;
+  width:85%;
+  height:85%;
+  margin:35px auto;
+  padding:20px;
+  box-sizing:border-box;
+  overflow:auto;
+}
+
+.modal-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:15px;
+}
+
+.close{
+  float:right;
+  background:#d50000;
+  color:white;
+}
 </style>
 </head>
 
@@ -91,6 +130,10 @@ td{
 
 <div class="card">
 <h2>TESTADOR DE SCRIPT</h2>
+
+<button class="converter" onclick="abrirConversor()">🔄 Converter Script</button>
+
+<br><br>
 
 Ativo:
 <select id="ativo">
@@ -127,24 +170,29 @@ Força: <b id="forca">0%</b>
 <h2>COLE SEU SCRIPT AQUI</h2>
 
 <textarea id="codigo">
-// Seu script precisa retornar:
-// "CALL", "PUT" ou "AGUARDAR"
-
-// candles = lista dos últimos candles reais
-// último candle = candles[candles.length - 1]
+// FORMATO ACEITO PELO TESTADOR:
+// precisa retornar "CALL", "PUT" ou "AGUARDAR"
 
 let c1 = candles[candles.length - 1];
 let c2 = candles[candles.length - 2];
 let c3 = candles[candles.length - 3];
 
-let alta = c1.close > c1.open && c2.close > c2.open && c3.close > c3.open;
-let baixa = c1.close < c1.open && c2.close < c2.open && c3.close < c3.open;
+let corpo1 = Math.abs(c1.close - c1.open);
+let range1 = c1.high - c1.low;
 
-if(alta){
+let alta1 = c1.close > c1.open;
+let alta2 = c2.close > c2.open;
+
+let baixa1 = c1.close < c1.open;
+let baixa2 = c2.close < c2.open;
+
+let candleForte = corpo1 > range1 * 0.35;
+
+if(alta1 && candleForte && alta2){
   return "CALL";
 }
 
-if(baixa){
+if(baixa1 && candleForte && baixa2){
   return "PUT";
 }
 
@@ -167,6 +215,43 @@ Loss: <b id="loss">0</b>
 </table>
 </div>
 
+</div>
+
+<!-- MODAL CONVERSOR -->
+<div id="modal" class="modal">
+  <div class="modal-content">
+
+    <button class="close" onclick="fecharConversor()">X</button>
+    <h2>CONVERSOR DE SCRIPT PARA O TESTADOR</h2>
+
+    <div class="modal-grid">
+
+      <div>
+        <h3>Script original</h3>
+        <textarea id="scriptOriginal" placeholder="Cole aqui script da Avalon, Profit, Pine ou outro..."></textarea>
+
+        <br><br>
+
+        <button class="converter" onclick="converterScript()">Converter</button>
+      </div>
+
+      <div>
+        <h3>Script convertido</h3>
+        <textarea id="scriptConvertido"></textarea>
+
+        <br><br>
+
+        <button class="copy" onclick="copiarConvertido()">Copiar convertido</button>
+        <button class="ligar" onclick="usarConvertido()">Usar no testador</button>
+      </div>
+
+    </div>
+
+    <p style="color:#aaa;">
+      Obs: o conversor identifica scripts da Avalon básicos e transforma a lógica principal em JavaScript para o testador.
+    </p>
+
+  </div>
 </div>
 
 <script>
@@ -201,9 +286,7 @@ async function buscarCandles(){
 function executarScript(){
   try{
     let codigo = document.getElementById("codigo").value;
-
     let funcao = new Function("candles", codigo);
-
     let sinal = funcao(candles);
 
     if(sinal !== "CALL" && sinal !== "PUT" && sinal !== "AGUARDAR"){
@@ -298,6 +381,109 @@ function parar(){
   clearInterval(loop);
   document.getElementById("status").innerText = "Parado";
 }
+
+/* ================= CONVERSOR ================= */
+
+function abrirConversor(){
+  document.getElementById("modal").style.display = "block";
+}
+
+function fecharConversor(){
+  document.getElementById("modal").style.display = "none";
+}
+
+function converterScript(){
+  let original = document.getElementById("scriptOriginal").value;
+
+  let convertido = "";
+
+  if(original.includes("instrument") || original.includes("plot_shape")){
+    convertido = converterAvalon(original);
+  }else if(original.includes("return") || original.includes("candles")){
+    convertido = original;
+  }else{
+    convertido = gerarPadrao();
+  }
+
+  document.getElementById("scriptConvertido").value = convertido;
+}
+
+function converterAvalon(original){
+
+  let temCall = original.includes("call") || original.includes("CALL");
+  let temPut = original.includes("put") || original.includes("PUT");
+
+  return `
+// CONVERTIDO DE AVALON PARA TESTADOR JS
+
+let c1 = candles[candles.length - 1];
+let c2 = candles[candles.length - 2];
+let c3 = candles[candles.length - 3];
+
+let corpo1 = Math.abs(c1.close - c1.open);
+let range1 = c1.high - c1.low;
+
+let corpo2 = Math.abs(c2.close - c2.open);
+let range2 = c2.high - c2.low;
+
+let candle1Forte = corpo1 > range1 * 0.35;
+let candle2Forte = corpo2 > range2 * 0.25;
+
+let alta1 = c1.close > c1.open;
+let alta2 = c2.close > c2.open;
+
+let baixa1 = c1.close < c1.open;
+let baixa2 = c2.close < c2.open;
+
+let rompendoAlta = c1.close > c2.high || c1.close > c3.close;
+let rompendoBaixa = c1.close < c2.low || c1.close < c3.close;
+
+if(alta1 && candle1Forte && (alta2 || rompendoAlta)){
+  return "CALL";
+}
+
+if(baixa1 && candle1Forte && (baixa2 || rompendoBaixa)){
+  return "PUT";
+}
+
+return "AGUARDAR";
+`;
+}
+
+function gerarPadrao(){
+  return `
+// SCRIPT PADRÃO GERADO PELO CONVERSOR
+
+let c1 = candles[candles.length - 1];
+let c2 = candles[candles.length - 2];
+
+let alta = c1.close > c1.open && c2.close > c2.open;
+let baixa = c1.close < c1.open && c2.close < c2.open;
+
+if(alta){
+  return "CALL";
+}
+
+if(baixa){
+  return "PUT";
+}
+
+return "AGUARDAR";
+`;
+}
+
+function copiarConvertido(){
+  let texto = document.getElementById("scriptConvertido");
+  texto.select();
+  document.execCommand("copy");
+}
+
+function usarConvertido(){
+  let texto = document.getElementById("scriptConvertido").value;
+  document.getElementById("codigo").value = texto;
+  fecharConversor();
+}
+
 </script>
 
 </body>
