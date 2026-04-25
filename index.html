@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<title>LAURO TESTADOR PRO</title>
+<title>LAURO TESTADOR PRO V3</title>
 <script src="https://s3.tradingview.com/tv.js"></script>
 
 <style>
@@ -15,7 +15,9 @@ select,input{background:#000;color:#d4af37;border:1px solid #d4af37;padding:9px;
 button{padding:11px 18px;border:none;border-radius:8px;font-weight:bold;cursor:pointer;margin:3px}
 .ligar{background:#00c853;color:#000}.parar{background:#d50000;color:white}.converter{background:#d4af37;color:#000}.copy{background:#333;color:white}
 .sinal{text-align:center;font-size:58px;font-weight:bold}.call{color:#00ff66}.put{color:#ff3333}.wait{color:#aaa}
+#tvwrap{position:relative;height:340px}
 #tvchart{height:340px}
+#overlay{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:10}
 table{width:100%;font-size:13px}td{padding:5px}.win{color:#00ff66}.loss{color:red}
 .modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.85);z-index:999}
 .modal-content{background:#111;border:2px solid #d4af37;border-radius:12px;width:85%;height:85%;margin:35px auto;padding:20px;box-sizing:border-box;overflow:auto}
@@ -62,7 +64,10 @@ Tempo:
 
 <div class="card">
 <h2>GRÁFICO</h2>
-<div id="tvchart"></div>
+<div id="tvwrap">
+  <div id="tvchart"></div>
+  <canvas id="overlay"></canvas>
+</div>
 </div>
 
 <div class="card">
@@ -147,10 +152,11 @@ let saldo=1000,wins=0,loss=0,rodando=false,candles=[];
 let timerAnalise=null,contadorLoop=null;
 let ultimaAnaliseTime=0;
 let operacaoPendente=null;
+let setas=[];
 
 function carregarGrafico(){
   document.getElementById("tvchart").innerHTML="";
-  let ativo=document.getElementById("ativo").value.replace("USDT","USDT");
+  let ativo=document.getElementById("ativo").value;
   let tempo=document.getElementById("tempo").value.replace("m","");
 
   new TradingView.widget({
@@ -168,6 +174,8 @@ function carregarGrafico(){
     allow_symbol_change:false,
     autosize:true
   });
+
+  setTimeout(redesenharSetas,1000);
 }
 
 function tempoMs(){
@@ -238,6 +246,58 @@ function mostrarSinal(sinal){
   document.getElementById("forca").innerText=forca+"%";
 }
 
+function prepararCanvas(){
+  let canvas=document.getElementById("overlay");
+  let wrap=document.getElementById("tvwrap");
+  canvas.width=wrap.clientWidth;
+  canvas.height=wrap.clientHeight;
+  return canvas;
+}
+
+function adicionarSeta(tipo){
+  setas.push(tipo);
+  if(setas.length>8) setas.shift();
+  redesenharSetas();
+}
+
+function redesenharSetas(){
+  let canvas=prepararCanvas();
+  let ctx=canvas.getContext("2d");
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  let baseX=canvas.width-80;
+  let distancia=38;
+
+  setas.forEach((tipo,i)=>{
+    let x=baseX-(setas.length-1-i)*distancia;
+    let y=tipo==="CALL"?canvas.height-70:70;
+
+    ctx.fillStyle=tipo==="CALL"?"#00ff00":"#ff0000";
+    ctx.strokeStyle="#000";
+    ctx.lineWidth=2;
+
+    ctx.beginPath();
+
+    if(tipo==="CALL"){
+      ctx.moveTo(x,y);
+      ctx.lineTo(x-14,y+24);
+      ctx.lineTo(x+14,y+24);
+    }else{
+      ctx.moveTo(x,y);
+      ctx.lineTo(x-14,y-24);
+      ctx.lineTo(x+14,y-24);
+    }
+
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle=tipo==="CALL"?"#00ff00":"#ff0000";
+    ctx.font="bold 14px Arial";
+    ctx.fillText(tipo,x-20,tipo==="CALL"?y+42:y-32);
+  });
+}
+
 function avaliarPendente(candleFechado){
   if(!operacaoPendente) return;
 
@@ -275,6 +335,8 @@ async function cicloReal(){
   let sinal=executarScript();
 
   if(sinal==="CALL" || sinal==="PUT"){
+    adicionarSeta(sinal);
+
     operacaoPendente={
       sinal:sinal,
       precoEntrada:ultimo.close,
@@ -345,9 +407,14 @@ function parar(){
 }
 
 function limparTeste(){
-  saldo=1000; wins=0; loss=0; operacaoPendente=null;
+  saldo=1000;
+  wins=0;
+  loss=0;
+  operacaoPendente=null;
+  setas=[];
   document.getElementById("hist").innerHTML="";
   mostrarSinal("AGUARDAR");
+  redesenharSetas();
   atualizar();
 }
 
@@ -443,6 +510,8 @@ document.getElementById("tempo").addEventListener("change",()=>{
   carregarGrafico();
   if(rodando){parar();ligar();}
 });
+
+window.addEventListener("resize",redesenharSetas);
 
 atualizar();
 carregarGrafico();
