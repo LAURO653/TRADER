@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <title>Lauro Trader</title>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <style>
 body {
   margin:0;
@@ -28,7 +30,6 @@ body {
 .menu-item {
   margin:15px 0;
   color:#aaa;
-  cursor:pointer;
 }
 .menu-item:hover {
   color:#d4af37;
@@ -37,76 +38,66 @@ body {
 /* MAIN */
 .main {
   flex:1;
+  display:flex;
+  justify-content:center;
   padding:30px;
-}
-
-/* TOPO */
-.topbar {
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-}
-.btn-top {
-  background:linear-gradient(45deg,#d4af37,#ffd700);
-  padding:10px 20px;
-  border-radius:8px;
-  color:black;
-  font-weight:bold;
-  cursor:pointer;
-}
-
-/* METRICAS */
-.metrics {
-  display:flex;
-  gap:15px;
-  margin-top:20px;
-}
-.metric {
-  background:#111;
-  padding:15px;
-  border-radius:10px;
-  border:1px solid rgba(212,175,55,0.4);
-  min-width:120px;
-  text-align:center;
 }
 
 /* CARD */
 .card {
-  margin-top:20px;
+  width:700px;
   background:#111;
-  padding:20px;
+  padding:25px;
   border-radius:15px;
-  border:1px solid rgba(212,175,55,0.4);
+  border:1px solid rgba(212,175,55,0.5);
+  box-shadow:0 0 30px rgba(212,175,55,0.2);
 }
 
-/* BOTÕES */
-.actions {
+/* METRICS */
+.metrics {
   display:flex;
-  gap:10px;
-  margin-top:15px;
+  justify-content:space-between;
+  margin-bottom:20px;
 }
-.action-btn {
-  flex:1;
+.metric {
+  background:#000;
   padding:10px;
-  border-radius:8px;
-  border:1px solid #d4af37;
+  border-radius:10px;
+  border:1px solid rgba(212,175,55,0.5);
+  width:100px;
   text-align:center;
+}
+
+/* BUTTONS */
+button {
+  padding:10px;
+  margin:5px;
+  border:none;
+  border-radius:6px;
   cursor:pointer;
 }
-.active {
+.green {
   background:#d4af37;
   color:black;
+}
+.red {
+  background:#550000;
+  color:white;
 }
 
 /* LOG */
 .log {
-  margin-top:20px;
-  height:100px;
-  overflow:auto;
   background:#000;
+  height:100px;
+  margin-top:10px;
   padding:10px;
+  overflow:auto;
   border-radius:10px;
   border:1px solid rgba(212,175,55,0.4);
+}
+
+canvas {
+  margin-top:20px;
 }
 
 </style>
@@ -125,35 +116,24 @@ body {
 
 <div class="main">
 
-<div class="topbar">
-<h1>Dashboard</h1>
-<div class="btn-top">+ Criar Novo Robô</div>
-</div>
+<div class="card">
+
+<h2>Dashboard</h2>
 
 <div class="metrics">
 <div class="metric">Saldo<br><b id="saldo">1000</b></div>
 <div class="metric">Lucro<br><b id="lucro">0</b></div>
-<div class="metric">Win Rate<br><b id="win">0%</b></div>
-<div class="metric">Vitórias<br><b id="wins">0</b></div>
-<div class="metric">Derrotas<br><b id="loss">0</b></div>
+<div class="metric">Win<br><b id="win">0%</b></div>
+<div class="metric">Wins<br><b id="wins">0</b></div>
+<div class="metric">Loss<br><b id="loss">0</b></div>
 </div>
 
-<div class="card">
-
-<h3>Polarium (Demo)</h3>
-
-<div class="actions">
-<div class="action-btn">Logs</div>
-<div class="action-btn active">Dashboard</div>
-<div class="action-btn">Histórico</div>
-</div>
-
-<div class="actions">
-<div class="action-btn" onclick="start()">▶ Ligar</div>
-<div class="action-btn" onclick="stop()">⏹ Parar</div>
-</div>
+<button class="green" onclick="start()">Ligar</button>
+<button class="red" onclick="stop()">Parar</button>
 
 <h3 id="status">Aguardando...</h3>
+
+<canvas id="grafico"></canvas>
 
 <div class="log" id="log"></div>
 
@@ -167,54 +147,89 @@ let saldo = 1000;
 let wins = 0;
 let loss = 0;
 let loop;
-let rodando = false;
+let grafico;
+let data = [];
+
+function iniciarGrafico(){
+  const ctx = document.getElementById('grafico');
+
+  grafico = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: [],
+      datasets: [{
+        data: [],
+        borderColor: '#d4af37',
+        backgroundColor: 'rgba(212,175,55,0.1)',
+        tension: 0.3
+      }]
+    },
+    options: {
+      plugins:{legend:{display:false}},
+      scales:{
+        x:{display:false},
+        y:{ticks:{color:'#d4af37'}}
+      }
+    }
+  });
+}
 
 function start(){
-  rodando = true;
-  document.getElementById("status").innerText = "Rodando...";
+  document.getElementById("status").innerText="Rodando...";
 
   loop = setInterval(()=>{
-    if(!rodando) return;
-
-    let r = Math.random() > 0.4;
+    let r = Math.random() > 0.45;
 
     if(r){
-      saldo += 10;
+      saldo+=10;
       wins++;
-      addLog("WIN +10");
+      log("WIN +10");
     } else {
-      saldo -= 10;
+      saldo-=10;
       loss++;
-      addLog("LOSS -10");
+      log("LOSS -10");
     }
 
     atualizar();
+    atualizarGrafico();
 
   },2000);
 }
 
 function stop(){
-  rodando = false;
   clearInterval(loop);
-  document.getElementById("status").innerText = "Parado";
+  document.getElementById("status").innerText="Parado";
 }
 
 function atualizar(){
-  document.getElementById("saldo").innerText = saldo;
-  document.getElementById("lucro").innerText = saldo - 1000;
+  document.getElementById("saldo").innerText=saldo;
+  document.getElementById("lucro").innerText=saldo-1000;
 
-  let total = wins + loss;
-  let pct = total ? ((wins/total)*100).toFixed(1) : 0;
+  let total = wins+loss;
+  let pct = total ? ((wins/total)*100).toFixed(1):0;
 
-  document.getElementById("win").innerText = pct + "%";
-  document.getElementById("wins").innerText = wins;
-  document.getElementById("loss").innerText = loss;
+  document.getElementById("win").innerText=pct+"%";
+  document.getElementById("wins").innerText=wins;
+  document.getElementById("loss").innerText=loss;
 }
 
-function addLog(msg){
-  let log = document.getElementById("log");
-  log.innerHTML = msg + "<br>" + log.innerHTML;
+function atualizarGrafico(){
+  grafico.data.labels.push("");
+  grafico.data.datasets[0].data.push(saldo);
+
+  if(grafico.data.labels.length>20){
+    grafico.data.labels.shift();
+    grafico.data.datasets[0].data.shift();
+  }
+
+  grafico.update();
 }
+
+function log(txt){
+  document.getElementById("log").innerHTML = txt+"<br>"+document.getElementById("log").innerHTML;
+}
+
+window.onload = iniciarGrafico;
 
 </script>
 
