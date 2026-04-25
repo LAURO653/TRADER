@@ -2,8 +2,7 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<title>LAURO TESTADOR PRO V3</title>
-<script src="https://s3.tradingview.com/tv.js"></script>
+<title>LAURO TESTADOR PRO V4</title>
 
 <style>
 body{margin:0;background:#070707;color:white;font-family:Arial}
@@ -15,9 +14,7 @@ select,input{background:#000;color:#d4af37;border:1px solid #d4af37;padding:9px;
 button{padding:11px 18px;border:none;border-radius:8px;font-weight:bold;cursor:pointer;margin:3px}
 .ligar{background:#00c853;color:#000}.parar{background:#d50000;color:white}.converter{background:#d4af37;color:#000}.copy{background:#333;color:white}
 .sinal{text-align:center;font-size:58px;font-weight:bold}.call{color:#00ff66}.put{color:#ff3333}.wait{color:#aaa}
-#tvwrap{position:relative;height:340px}
-#tvchart{height:340px}
-#overlay{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:10}
+canvas{width:100%;height:340px;background:#0b0b0b;border-radius:8px}
 table{width:100%;font-size:13px}td{padding:5px}.win{color:#00ff66}.loss{color:red}
 .modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.85);z-index:999}
 .modal-content{background:#111;border:2px solid #d4af37;border-radius:12px;width:85%;height:85%;margin:35px auto;padding:20px;box-sizing:border-box;overflow:auto}
@@ -63,11 +60,8 @@ Tempo:
 </div>
 
 <div class="card">
-<h2>GRÁFICO</h2>
-<div id="tvwrap">
-  <div id="tvchart"></div>
-  <canvas id="overlay"></canvas>
-</div>
+<h2>GRÁFICO PRÓPRIO</h2>
+<canvas id="grafico" width="900" height="340"></canvas>
 </div>
 
 <div class="card">
@@ -152,31 +146,7 @@ let saldo=1000,wins=0,loss=0,rodando=false,candles=[];
 let timerAnalise=null,contadorLoop=null;
 let ultimaAnaliseTime=0;
 let operacaoPendente=null;
-let setas=[];
-
-function carregarGrafico(){
-  document.getElementById("tvchart").innerHTML="";
-  let ativo=document.getElementById("ativo").value;
-  let tempo=document.getElementById("tempo").value.replace("m","");
-
-  new TradingView.widget({
-    container_id:"tvchart",
-    width:"100%",
-    height:340,
-    symbol:"BINANCE:"+ativo,
-    interval:tempo,
-    theme:"dark",
-    locale:"br",
-    timezone:"America/Sao_Paulo",
-    style:"1",
-    hide_top_toolbar:false,
-    hide_side_toolbar:false,
-    allow_symbol_change:false,
-    autosize:true
-  });
-
-  setTimeout(redesenharSetas,1000);
-}
+let marcacoes=[];
 
 function tempoMs(){
   let t=document.getElementById("tempo").value;
@@ -199,7 +169,7 @@ function formatarHora(ms){
 async function buscarCandlesFechados(){
   let ativo=document.getElementById("ativo").value;
   let tempo=document.getElementById("tempo").value;
-  let url=`https://api.binance.com/api/v3/klines?symbol=${ativo}&interval=${tempo}&limit=60`;
+  let url=`https://api.binance.com/api/v3/klines?symbol=${ativo}&interval=${tempo}&limit=70`;
 
   let resposta=await fetch(url);
   let dados=await resposta.json();
@@ -218,6 +188,8 @@ async function buscarCandlesFechados(){
 
   let ultimo=candles[candles.length-1];
   if(ultimo) document.getElementById("preco").innerText=ultimo.close.toFixed(2);
+
+  desenharGrafico();
 }
 
 function executarScript(){
@@ -246,55 +218,143 @@ function mostrarSinal(sinal){
   document.getElementById("forca").innerText=forca+"%";
 }
 
-function prepararCanvas(){
-  let canvas=document.getElementById("overlay");
-  let wrap=document.getElementById("tvwrap");
-  canvas.width=wrap.clientWidth;
-  canvas.height=wrap.clientHeight;
-  return canvas;
-}
-
-function adicionarSeta(tipo){
-  setas.push(tipo);
-  if(setas.length>8) setas.shift();
-  redesenharSetas();
-}
-
-function redesenharSetas(){
-  let canvas=prepararCanvas();
+function desenharGrafico(){
+  let canvas=document.getElementById("grafico");
   let ctx=canvas.getContext("2d");
+
   ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle="#0b0b0b";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
 
-  let baseX=canvas.width-80;
-  let distancia=38;
+  if(candles.length<5) return;
 
-  setas.forEach((tipo,i)=>{
-    let x=baseX-(setas.length-1-i)*distancia;
-    let y=tipo==="CALL"?canvas.height-70:70;
+  let margemTopo=25;
+  let margemBaixo=35;
+  let margemDir=70;
+  let largura=canvas.width-margemDir;
+  let altura=canvas.height-margemTopo-margemBaixo;
 
-    ctx.fillStyle=tipo==="CALL"?"#00ff00":"#ff0000";
+  let max=Math.max(...candles.map(c=>c.high));
+  let min=Math.min(...candles.map(c=>c.low));
+  let folga=(max-min)*0.12;
+  max+=folga;
+  min-=folga;
+
+  function y(preco){
+    return margemTopo + altura - ((preco-min)/(max-min))*altura;
+  }
+
+  function x(i){
+    return (largura/candles.length)*i + (largura/candles.length)/2;
+  }
+
+  // grid
+  ctx.strokeStyle="#222";
+  ctx.lineWidth=1;
+  for(let i=0;i<=6;i++){
+    let yy=margemTopo+(altura/6)*i;
+    ctx.beginPath();
+    ctx.moveTo(0,yy);
+    ctx.lineTo(largura,yy);
+    ctx.stroke();
+
+    let preco=max-((max-min)/6)*i;
+    ctx.fillStyle="#aaa";
+    ctx.font="11px Arial";
+    ctx.fillText(preco.toFixed(2),largura+5,yy+4);
+  }
+
+  for(let i=0;i<=10;i++){
+    let xx=(largura/10)*i;
+    ctx.beginPath();
+    ctx.moveTo(xx,margemTopo);
+    ctx.lineTo(xx,margemTopo+altura);
+    ctx.stroke();
+  }
+
+  let candleW=Math.max(5,(largura/candles.length)*0.55);
+
+  candles.forEach((c,i)=>{
+    let xx=x(i);
+    let yo=y(c.open);
+    let yc=y(c.close);
+    let yh=y(c.high);
+    let yl=y(c.low);
+
+    let alta=c.close>=c.open;
+    let cor=alta?"#00c087":"#ff3b3b";
+
+    ctx.strokeStyle=cor;
+    ctx.fillStyle=cor;
+    ctx.lineWidth=1.5;
+
+    ctx.beginPath();
+    ctx.moveTo(xx,yh);
+    ctx.lineTo(xx,yl);
+    ctx.stroke();
+
+    let corpoY=Math.min(yo,yc);
+    let corpoH=Math.abs(yc-yo);
+    if(corpoH<3) corpoH=3;
+
+    ctx.fillRect(xx-candleW/2,corpoY,candleW,corpoH);
+  });
+
+  // linha preço atual
+  let ultimo=candles[candles.length-1];
+  let yAtual=y(ultimo.close);
+
+  ctx.strokeStyle="#00c087";
+  ctx.setLineDash([4,4]);
+  ctx.beginPath();
+  ctx.moveTo(0,yAtual);
+  ctx.lineTo(largura,yAtual);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.fillStyle="#00c087";
+  ctx.fillRect(largura+5,yAtual-11,62,22);
+  ctx.fillStyle="#fff";
+  ctx.font="11px Arial";
+  ctx.fillText(ultimo.close.toFixed(2),largura+9,yAtual+4);
+
+  // marcações no candle exato
+  marcacoes.forEach(m=>{
+    let idx=candles.findIndex(c=>c.closeTime===m.closeTime);
+    if(idx<0) return;
+
+    let c=candles[idx];
+    let xx=x(idx);
+
+    let yy=m.sinal==="CALL" ? y(c.low)+18 : y(c.high)-18;
+    let cor=m.sinal==="CALL" ? "#00ff00" : "#ff0000";
+
+    ctx.fillStyle=cor;
     ctx.strokeStyle="#000";
     ctx.lineWidth=2;
 
     ctx.beginPath();
-
-    if(tipo==="CALL"){
-      ctx.moveTo(x,y);
-      ctx.lineTo(x-14,y+24);
-      ctx.lineTo(x+14,y+24);
+    if(m.sinal==="CALL"){
+      ctx.moveTo(xx,yy-16);
+      ctx.lineTo(xx-10,yy+6);
+      ctx.lineTo(xx+10,yy+6);
     }else{
-      ctx.moveTo(x,y);
-      ctx.lineTo(x-14,y-24);
-      ctx.lineTo(x+14,y-24);
+      ctx.moveTo(xx,yy+16);
+      ctx.lineTo(xx-10,yy-6);
+      ctx.lineTo(xx+10,yy-6);
     }
-
     ctx.closePath();
     ctx.fill();
     ctx.stroke();
 
-    ctx.fillStyle=tipo==="CALL"?"#00ff00":"#ff0000";
-    ctx.font="bold 14px Arial";
-    ctx.fillText(tipo,x-20,tipo==="CALL"?y+42:y-32);
+    ctx.font="bold 11px Arial";
+    ctx.fillStyle=cor;
+    ctx.fillText(m.sinal,xx-16,m.sinal==="CALL"?yy+22:yy-14);
+
+    if(m.resultado){
+      ctx.fillStyle=m.resultado==="WIN"?"#00ff00":"#ff0000";
+      ctx.fillText(m.resultado,xx-15,m.sinal==="CALL"?yy+36:yy-28);
+    }
   });
 }
 
@@ -309,6 +369,9 @@ function avaliarPendente(candleFechado){
   if(resultado==="WIN"){saldo+=10;wins++}
   else{saldo-=10;loss++}
 
+  let marc=marcacoes.find(m=>m.id===operacaoPendente.id);
+  if(marc) marc.resultado=resultado;
+
   addHist(
     operacaoPendente.horaEntrada,
     operacaoPendente.sinal,
@@ -319,6 +382,7 @@ function avaliarPendente(candleFechado){
 
   operacaoPendente=null;
   atualizar();
+  desenharGrafico();
 }
 
 async function cicloReal(){
@@ -335,13 +399,25 @@ async function cicloReal(){
   let sinal=executarScript();
 
   if(sinal==="CALL" || sinal==="PUT"){
-    adicionarSeta(sinal);
+    let id=Date.now();
+
+    marcacoes.push({
+      id:id,
+      closeTime:ultimo.closeTime,
+      sinal:sinal,
+      resultado:null
+    });
+
+    if(marcacoes.length>30) marcacoes.shift();
 
     operacaoPendente={
+      id:id,
       sinal:sinal,
       precoEntrada:ultimo.close,
       horaEntrada:formatarHora(ultimo.closeTime)
     };
+
+    desenharGrafico();
   }else{
     addHist(formatarHora(ultimo.closeTime),"AGUARDAR","SEM ENTRADA",ultimo.close,ultimo.close);
   }
@@ -411,11 +487,11 @@ function limparTeste(){
   wins=0;
   loss=0;
   operacaoPendente=null;
-  setas=[];
+  marcacoes=[];
   document.getElementById("hist").innerHTML="";
   mostrarSinal("AGUARDAR");
-  redesenharSetas();
   atualizar();
+  desenharGrafico();
 }
 
 /* CONVERSOR */
@@ -502,19 +578,19 @@ function usarConvertido(){
 }
 
 document.getElementById("ativo").addEventListener("change",()=>{
-  carregarGrafico();
   if(rodando){parar();ligar();}
+  else buscarCandlesFechados();
 });
 
 document.getElementById("tempo").addEventListener("change",()=>{
-  carregarGrafico();
   if(rodando){parar();ligar();}
+  else buscarCandlesFechados();
 });
 
-window.addEventListener("resize",redesenharSetas);
+window.addEventListener("resize",desenharGrafico);
 
 atualizar();
-carregarGrafico();
+buscarCandlesFechados();
 </script>
 
 </body>
