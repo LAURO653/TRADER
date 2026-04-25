@@ -2,123 +2,31 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<title>LAURO TRADER</title>
+<title>LAURO TRADER PRO</title>
 
 <style>
-body{
-  margin:0;
-  background:#000;
-  color:#d4af37;
-  font-family:Arial;
-  display:flex;
-}
-
-.sidebar{
-  width:300px;
-  min-height:100vh;
-  border-right:2px solid #d4af37;
-  padding:30px;
-  box-sizing:border-box;
-}
-
-.logo{
-  font-size:34px;
-  font-weight:bold;
-  margin-bottom:35px;
-}
-
-.menu div{
-  margin:18px 0;
-  font-size:18px;
-}
-
-.conta{
-  margin-top:60px;
-  border:1px solid #d4af37;
-  border-radius:10px;
-  padding:20px;
-}
-
-.main{
-  flex:1;
-  padding:35px;
-}
-
-.top{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-}
-
-.criar{
-  background:#d4af37;
-  color:#000;
-  border:0;
-  padding:12px 25px;
-  border-radius:8px;
-  font-weight:bold;
-}
-
-.cards{
-  display:grid;
-  grid-template-columns:repeat(5,1fr);
-  gap:15px;
-  margin-top:25px;
-}
-
-.card{
-  border:1px solid #d4af37;
-  border-radius:10px;
-  padding:18px;
-  background:#080808;
-}
-
-.controls{
-  margin:25px 0;
-}
-
-button{
-  border:0;
-  padding:12px 30px;
-  border-radius:8px;
-  font-weight:bold;
-  cursor:pointer;
-}
-
-.ligar{background:#00b050;color:white;}
-.parar{background:#c00000;color:white;}
-
-.grid{
-  display:grid;
-  grid-template-columns:2fr 1fr;
-  gap:20px;
-}
-
-.box{
-  border:1px solid #d4af37;
-  border-radius:12px;
-  padding:20px;
-  background:#080808;
-}
-
-canvas{
-  width:100%;
-  height:350px;
-  background:#020202;
-  border-radius:8px;
-}
-
-table{
-  width:100%;
-  font-size:14px;
-}
-
-td{
-  padding:6px;
-}
-
-.win{color:#00ff66;}
-.loss{color:red;}
+body{margin:0;background:#000;color:#d4af37;font-family:Arial;display:flex}
+.sidebar{width:300px;min-height:100vh;border-right:2px solid #d4af37;padding:30px;box-sizing:border-box}
+.logo{font-size:34px;font-weight:bold;margin-bottom:35px}
+.menu div{margin:18px 0;font-size:18px}
+.conta{margin-top:60px;border:1px solid #d4af37;border-radius:10px;padding:20px}
+.main{flex:1;padding:35px}
+.top{display:flex;justify-content:space-between;align-items:center}
+.criar{background:#d4af37;color:#000;border:0;padding:12px 25px;border-radius:8px;font-weight:bold}
+.cards{display:grid;grid-template-columns:repeat(5,1fr);gap:15px;margin-top:25px}
+.card{border:1px solid #d4af37;border-radius:10px;padding:18px;background:#080808}
+.controls{margin:25px 0}
+button{border:0;padding:12px 30px;border-radius:8px;font-weight:bold;cursor:pointer}
+.ligar{background:#00b050;color:white}
+.parar{background:#c00000;color:white}
+.grid{display:grid;grid-template-columns:2fr 1fr;gap:20px}
+.box{border:1px solid #d4af37;border-radius:12px;padding:20px;background:#080808}
+canvas{width:100%;height:350px;background:#020202;border-radius:8px}
+table{width:100%;font-size:14px}
+td{padding:6px}
+.win{color:#00ff66}
+.loss{color:red}
+.neutro{color:#aaa}
 </style>
 </head>
 
@@ -137,7 +45,9 @@ td{
 
   <div class="conta">
     Conta Demo<br><br>
-    <b>R$ <span id="saldoLateral">1000</span></b>
+    <b>R$ <span id="saldoLateral">1000</span></b><br><br>
+    Meta: R$ 80<br>
+    Stop: -R$ 60
   </div>
 </div>
 
@@ -157,7 +67,7 @@ td{
   </div>
 
   <div class="controls">
-    <button class="ligar" onclick="ligar()">Ligar</button>
+    <button class="ligar" onclick="ligar()">Ligar Robô</button>
     <button class="parar" onclick="parar()">Parar</button>
     <span id="status" style="margin-left:20px;">Aguardando...</span>
   </div>
@@ -180,16 +90,26 @@ td{
 
 <script>
 let saldo = 1000;
+let saldoInicial = 1000;
 let vitorias = 0;
 let derrotas = 0;
 let rodando = false;
 let intervalo = null;
 let pontos = [1000];
 
+let preco = 1000;
+let historicoPreco = [1000];
+
+let metaLucro = 80;
+let stopLoss = -60;
+let maxOperacoes = 30;
+
 function atualizarTela(){
+  let lucro = saldo - saldoInicial;
+
   document.getElementById("saldo").innerText = saldo;
   document.getElementById("saldoLateral").innerText = saldo;
-  document.getElementById("lucro").innerText = saldo - 1000;
+  document.getElementById("lucro").innerText = lucro;
   document.getElementById("wins").innerText = vitorias;
   document.getElementById("loss").innerText = derrotas;
 
@@ -198,6 +118,21 @@ function atualizarTela(){
   document.getElementById("winrate").innerText = wr + "%";
 
   desenharGrafico();
+
+  if(lucro >= metaLucro){
+    parar();
+    document.getElementById("status").innerText = "Meta atingida ✅";
+  }
+
+  if(lucro <= stopLoss){
+    parar();
+    document.getElementById("status").innerText = "Stop atingido ❌";
+  }
+
+  if(total >= maxOperacoes){
+    parar();
+    document.getElementById("status").innerText = "Limite de operações atingido";
+  }
 }
 
 function desenharGrafico(){
@@ -231,41 +166,83 @@ function desenharGrafico(){
     let x = (i / (pontos.length - 1 || 1)) * canvas.width;
     let y = canvas.height - ((valor - min) / (max - min)) * canvas.height;
 
-    if(i === 0){
-      ctx.moveTo(x,y);
-    }else{
-      ctx.lineTo(x,y);
-    }
+    if(i === 0){ ctx.moveTo(x,y); }
+    else{ ctx.lineTo(x,y); }
   });
 
   ctx.stroke();
 }
 
-function adicionarHistorico(resultado){
-  let historico = document.getElementById("historico");
-  let hora = new Date().toLocaleTimeString();
+function simularPreco(){
+  let movimento = (Math.random() - 0.48) * 12;
+  preco += movimento;
 
-  let classe = resultado === "WIN" ? "win" : "loss";
+  historicoPreco.push(preco);
 
-  historico.innerHTML =
-    `<tr>
-      <td>${hora}</td>
-      <td>EUR/USD</td>
-      <td class="${classe}">${resultado}</td>
-    </tr>` + historico.innerHTML;
+  if(historicoPreco.length > 20){
+    historicoPreco.shift();
+  }
+}
+
+function inteligencia(){
+  if(historicoPreco.length < 6){
+    return "AGUARDAR";
+  }
+
+  let p1 = historicoPreco[historicoPreco.length - 1];
+  let p2 = historicoPreco[historicoPreco.length - 2];
+  let p3 = historicoPreco[historicoPreco.length - 3];
+  let p4 = historicoPreco[historicoPreco.length - 4];
+
+  let alta = p1 > p2 && p2 > p3;
+  let baixa = p1 < p2 && p2 < p3;
+  let forca = Math.abs(p1 - p4);
+
+  if(forca < 4){
+    return "AGUARDAR";
+  }
+
+  if(alta){
+    return "CALL";
+  }
+
+  if(baixa){
+    return "PUT";
+  }
+
+  return "AGUARDAR";
 }
 
 function operar(){
-  let ganhou = Math.random() > 0.45;
+  simularPreco();
+
+  let sinal = inteligencia();
+
+  if(sinal === "AGUARDAR"){
+    adicionarHistorico("AGUARDAR", "neutro", "Sem entrada");
+    return;
+  }
+
+  let chance = 0.68;
+
+  if(sinal === "CALL" && preco > historicoPreco[historicoPreco.length - 2]){
+    chance = 0.75;
+  }
+
+  if(sinal === "PUT" && preco < historicoPreco[historicoPreco.length - 2]){
+    chance = 0.75;
+  }
+
+  let ganhou = Math.random() < chance;
 
   if(ganhou){
     saldo += 10;
     vitorias++;
-    adicionarHistorico("WIN");
+    adicionarHistorico("WIN", "win", sinal);
   }else{
     saldo -= 10;
     derrotas++;
-    adicionarHistorico("LOSS");
+    adicionarHistorico("LOSS", "loss", sinal);
   }
 
   pontos.push(saldo);
@@ -277,19 +254,30 @@ function operar(){
   atualizarTela();
 }
 
+function adicionarHistorico(resultado, classe, direcao){
+  let historico = document.getElementById("historico");
+  let hora = new Date().toLocaleTimeString();
+
+  historico.innerHTML =
+    `<tr>
+      <td>${hora}</td>
+      <td>EUR/USD</td>
+      <td>${direcao}</td>
+      <td class="${classe}">${resultado}</td>
+    </tr>` + historico.innerHTML;
+}
+
 function ligar(){
   if(rodando) return;
 
   rodando = true;
-  document.getElementById("status").innerText = "Rodando...";
+  document.getElementById("status").innerText = "Robô analisando mercado...";
 
   intervalo = setInterval(operar, 1500);
 }
 
 function parar(){
   rodando = false;
-  document.getElementById("status").innerText = "Parado";
-
   clearInterval(intervalo);
 }
 
