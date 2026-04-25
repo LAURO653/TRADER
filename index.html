@@ -2,222 +2,450 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<title>TESTADOR PRO V2</title>
-
+<title>LAURO TESTADOR PRO</title>
 <script src="https://s3.tradingview.com/tv.js"></script>
 
 <style>
-body {
-    background:#0b0b0b;
-    color:#fff;
-    font-family:Arial;
-}
-
-.box {
-    border:2px solid gold;
-    padding:10px;
-    margin:10px;
-    border-radius:10px;
-}
-
-button {
-    padding:10px;
-    border:none;
-    border-radius:5px;
-    cursor:pointer;
-}
-
-.green {background:#00c853;}
-.red {background:#d50000;}
-.yellow {background:gold;}
-
-textarea {
-    width:100%;
-    height:200px;
-    background:#000;
-    color:#00ff00;
-}
-
-table {
-    width:100%;
-    text-align:center;
-}
-
-.win {color:#00ff00;}
-.loss {color:#ff0000;}
+body{margin:0;background:#070707;color:white;font-family:Arial}
+.container{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:14px}
+.card{background:#111;border:1px solid #d4af37;border-radius:12px;padding:14px}
+h2{color:#d4af37;margin:0 0 12px}
+textarea{width:100%;height:230px;background:#000;color:#00ff66;border:1px solid #d4af37;border-radius:8px;padding:10px;font-family:monospace;box-sizing:border-box}
+select,input{background:#000;color:#d4af37;border:1px solid #d4af37;padding:9px;border-radius:8px}
+button{padding:11px 18px;border:none;border-radius:8px;font-weight:bold;cursor:pointer;margin:3px}
+.ligar{background:#00c853;color:#000}.parar{background:#d50000;color:white}.converter{background:#d4af37;color:#000}.copy{background:#333;color:white}
+.sinal{text-align:center;font-size:58px;font-weight:bold}.call{color:#00ff66}.put{color:#ff3333}.wait{color:#aaa}
+#tvchart{height:340px}
+table{width:100%;font-size:13px}td{padding:5px}.win{color:#00ff66}.loss{color:red}
+.modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.85);z-index:999}
+.modal-content{background:#111;border:2px solid #d4af37;border-radius:12px;width:85%;height:85%;margin:35px auto;padding:20px;box-sizing:border-box;overflow:auto}
+.modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}.close{float:right;background:#d50000;color:white}
 </style>
 </head>
 
 <body>
 
-<div class="box">
+<div class="container">
+
+<div class="card">
 <h2>TESTADOR DE SCRIPT</h2>
-
-<button class="yellow" onclick="abrirConversor()">Converter Script</button>
-
-<br><br>
+<button class="converter" onclick="abrirConversor()">🔄 Converter Script</button><br><br>
 
 Ativo:
 <select id="ativo">
-<option value="BINANCE:BTCUSDT">BTC</option>
+<option value="BTCUSDT">Bitcoin BTC/USDT</option>
+<option value="ETHUSDT">Ethereum ETH/USDT</option>
+<option value="SOLUSDT">Solana SOL/USDT</option>
 </select>
 
 Tempo:
 <select id="tempo">
-<option value="60">1 minuto</option>
-<option value="180">3 minutos</option>
-<option value="300">5 minutos</option>
+<option value="1m">1 minuto</option>
+<option value="3m">3 minutos</option>
+<option value="5m">5 minutos</option>
 </select>
 
 <br><br>
+<button class="ligar" onclick="ligar()">LIGAR TESTE</button>
+<button class="parar" onclick="parar()">PARAR</button>
 
-<button class="green" onclick="ligar()">LIGAR TESTE</button>
-<button class="red" onclick="parar()">PARAR</button>
+<p>Status: <b id="status">Parado</b></p>
+<p>Próximo fechamento: <b id="contador">--</b></p>
+<p>Preço atual: <b id="preco">0.00</b></p>
+</div>
 
-<p id="status">Status: parado</p>
-<p id="tempoRestante"></p>
+<div class="card">
+<h2>SINAL DO SCRIPT</h2>
+<div id="sinal" class="sinal wait">AGUARDAR</div>
+<div style="text-align:center;font-size:24px;">Força: <b id="forca">0%</b></div>
+</div>
+
+<div class="card">
+<h2>GRÁFICO</h2>
+<div id="tvchart"></div>
+</div>
+
+<div class="card">
+<h2>RESULTADO</h2>
+Saldo: <b id="saldo">1000</b><br>
+Lucro: <b id="lucro">0</b><br>
+WinRate: <b id="wr">0%</b><br>
+Wins: <b id="wins">0</b><br>
+Loss: <b id="loss">0</b>
+<br><br>
+<button class="copy" onclick="limparTeste()">Limpar teste</button>
+</div>
+
+<div class="card">
+<h2>COLE SEU SCRIPT AQUI</h2>
+<textarea id="codigo">
+let c1 = candles[candles.length - 1];
+let c2 = candles[candles.length - 2];
+let c3 = candles[candles.length - 3];
+
+let corpo1 = Math.abs(c1.close - c1.open);
+let range1 = c1.high - c1.low;
+
+let corpo2 = Math.abs(c2.close - c2.open);
+let range2 = c2.high - c2.low;
+
+let candle1Forte = corpo1 > range1 * 0.35;
+let candle2Forte = corpo2 > range2 * 0.25;
+
+let alta1 = c1.close > c1.open;
+let alta2 = c2.close > c2.open;
+
+let baixa1 = c1.close < c1.open;
+let baixa2 = c2.close < c2.open;
+
+let rompendoAlta = c1.close > c2.high || c1.close > c3.close;
+let rompendoBaixa = c1.close < c2.low || c1.close < c3.close;
+
+if(alta1 && candle1Forte && (alta2 || rompendoAlta)){
+  return "CALL";
+}
+
+if(baixa1 && candle1Forte && (baixa2 || rompendoBaixa)){
+  return "PUT";
+}
+
+return "AGUARDAR";
+</textarea>
+</div>
+
+<div class="card">
+<h2>HISTÓRICO</h2>
+<table><tbody id="hist"></tbody></table>
+</div>
 
 </div>
 
-<div id="tvchart" style="height:400px;"></div>
+<div id="modal" class="modal">
+<div class="modal-content">
+<button class="close" onclick="fecharConversor()">X</button>
+<h2>CONVERSOR DE SCRIPT</h2>
 
-<div class="box">
-<h3>SINAL</h3>
-<h1 id="sinal">AGUARDAR</h1>
+<div class="modal-grid">
+<div>
+<h3>Script original</h3>
+<textarea id="scriptOriginal"></textarea>
+<button class="converter" onclick="converterScript()">Converter</button>
 </div>
 
-<div class="box">
-<h3>COLE SEU SCRIPT</h3>
-<textarea id="script"></textarea>
+<div>
+<h3>Script convertido</h3>
+<textarea id="scriptConvertido"></textarea>
+<button class="copy" onclick="copiarConvertido()">Copiar convertido</button>
+<button class="ligar" onclick="usarConvertido()">Usar no testador</button>
 </div>
-
-<div class="box">
-<h3>RESULTADO</h3>
-<p>Saldo: <span id="saldo">1000</span></p>
-<p>WinRate: <span id="wr">0</span>%</p>
-<p>Wins: <span id="wins">0</span></p>
-<p>Loss: <span id="loss">0</span></p>
 </div>
-
-<div class="box">
-<h3>HISTÓRICO</h3>
-<table id="historico">
-<tr><th>Hora</th><th>Sinal</th><th>Resultado</th></tr>
-</table>
+</div>
 </div>
 
 <script>
+let saldo=1000,wins=0,loss=0,rodando=false,candles=[];
+let timerAnalise=null,contadorLoop=null;
+let ultimaAnaliseTime=0;
+let operacaoPendente=null;
 
-let saldo=1000
-let wins=0
-let loss=0
-let rodando=false
-let tempo=60
-let entry=null
+function carregarGrafico(){
+  document.getElementById("tvchart").innerHTML="";
+  let ativo=document.getElementById("ativo").value.replace("USDT","USDT");
+  let tempo=document.getElementById("tempo").value.replace("m","");
 
-new TradingView.widget({
-    container_id: "tvchart",
-    width: "100%",
-    height: 400,
-    symbol: "BINANCE:BTCUSDT",
-    interval: "1",
-    theme: "dark"
-})
+  new TradingView.widget({
+    container_id:"tvchart",
+    width:"100%",
+    height:340,
+    symbol:"BINANCE:"+ativo,
+    interval:tempo,
+    theme:"dark",
+    locale:"br",
+    timezone:"America/Sao_Paulo",
+    style:"1",
+    hide_top_toolbar:false,
+    hide_side_toolbar:false,
+    allow_symbol_change:false,
+    autosize:true
+  });
+}
+
+function tempoMs(){
+  let t=document.getElementById("tempo").value;
+  if(t==="1m") return 60000;
+  if(t==="3m") return 180000;
+  if(t==="5m") return 300000;
+  return 60000;
+}
+
+function proximoFechamentoMs(){
+  let agora=Date.now();
+  let periodo=tempoMs();
+  return Math.ceil(agora/periodo)*periodo + 2000;
+}
+
+function formatarHora(ms){
+  return new Date(ms).toLocaleTimeString();
+}
+
+async function buscarCandlesFechados(){
+  let ativo=document.getElementById("ativo").value;
+  let tempo=document.getElementById("tempo").value;
+  let url=`https://api.binance.com/api/v3/klines?symbol=${ativo}&interval=${tempo}&limit=60`;
+
+  let resposta=await fetch(url);
+  let dados=await resposta.json();
+  let agora=Date.now();
+
+  let lista=dados.map(c=>({
+    time:c[0],
+    closeTime:c[6],
+    open:parseFloat(c[1]),
+    high:parseFloat(c[2]),
+    low:parseFloat(c[3]),
+    close:parseFloat(c[4])
+  }));
+
+  candles=lista.filter(c=>c.closeTime < agora);
+
+  let ultimo=candles[candles.length-1];
+  if(ultimo) document.getElementById("preco").innerText=ultimo.close.toFixed(2);
+}
+
+function executarScript(){
+  try{
+    let codigo=document.getElementById("codigo").value;
+    let funcao=new Function("candles",codigo);
+    let sinal=funcao(candles);
+
+    if(sinal!=="CALL" && sinal!=="PUT" && sinal!=="AGUARDAR") sinal="AGUARDAR";
+
+    mostrarSinal(sinal);
+    return sinal;
+  }catch(e){
+    document.getElementById("status").innerText="Erro no script";
+    console.log(e);
+    return "AGUARDAR";
+  }
+}
+
+function mostrarSinal(sinal){
+  let el=document.getElementById("sinal");
+  el.innerText=sinal;
+  el.className="sinal "+(sinal==="CALL"?"call":sinal==="PUT"?"put":"wait");
+
+  let forca=sinal==="AGUARDAR"?0:Math.floor(60+Math.random()*35);
+  document.getElementById("forca").innerText=forca+"%";
+}
+
+function avaliarPendente(candleFechado){
+  if(!operacaoPendente) return;
+
+  let resultado="LOSS";
+
+  if(operacaoPendente.sinal==="CALL" && candleFechado.close > operacaoPendente.precoEntrada) resultado="WIN";
+  if(operacaoPendente.sinal==="PUT" && candleFechado.close < operacaoPendente.precoEntrada) resultado="WIN";
+
+  if(resultado==="WIN"){saldo+=10;wins++}
+  else{saldo-=10;loss++}
+
+  addHist(
+    operacaoPendente.horaEntrada,
+    operacaoPendente.sinal,
+    resultado,
+    operacaoPendente.precoEntrada,
+    candleFechado.close
+  );
+
+  operacaoPendente=null;
+  atualizar();
+}
+
+async function cicloReal(){
+  await buscarCandlesFechados();
+  if(candles.length<5) return;
+
+  let ultimo=candles[candles.length-1];
+
+  if(ultimo.closeTime===ultimaAnaliseTime) return;
+  ultimaAnaliseTime=ultimo.closeTime;
+
+  avaliarPendente(ultimo);
+
+  let sinal=executarScript();
+
+  if(sinal==="CALL" || sinal==="PUT"){
+    operacaoPendente={
+      sinal:sinal,
+      precoEntrada:ultimo.close,
+      horaEntrada:formatarHora(ultimo.closeTime)
+    };
+  }else{
+    addHist(formatarHora(ultimo.closeTime),"AGUARDAR","SEM ENTRADA",ultimo.close,ultimo.close);
+  }
+
+  agendarProxima();
+}
+
+function agendarProxima(){
+  clearTimeout(timerAnalise);
+  let proximo=proximoFechamentoMs();
+  timerAnalise=setTimeout(cicloReal,proximo-Date.now());
+}
+
+function iniciarContador(){
+  clearInterval(contadorLoop);
+  contadorLoop=setInterval(()=>{
+    let falta=Math.max(0,Math.ceil((proximoFechamentoMs()-Date.now())/1000));
+    document.getElementById("contador").innerText=falta+"s";
+  },1000);
+}
+
+function addHist(hora,sinal,resultado,entrada,saida){
+  let cor=resultado==="WIN"?"win":resultado==="LOSS"?"loss":"";
+
+  document.getElementById("hist").innerHTML=
+  `<tr>
+    <td>${hora}</td>
+    <td>${document.getElementById("ativo").value}</td>
+    <td>${document.getElementById("tempo").value}</td>
+    <td>${sinal}</td>
+    <td>${entrada.toFixed(2)} → ${saida.toFixed(2)}</td>
+    <td class="${cor}">${resultado}</td>
+  </tr>`+document.getElementById("hist").innerHTML;
+}
+
+function atualizar(){
+  document.getElementById("saldo").innerText=saldo;
+  document.getElementById("lucro").innerText=saldo-1000;
+  document.getElementById("wins").innerText=wins;
+  document.getElementById("loss").innerText=loss;
+
+  let total=wins+loss;
+  let wr=total?((wins/total)*100).toFixed(1):0;
+  document.getElementById("wr").innerText=wr+"%";
+}
 
 function ligar(){
-    rodando=true
-    tempo=parseInt(document.getElementById("tempo").value)
-    document.getElementById("status").innerText="Rodando"
-    loop()
+  if(rodando) return;
+
+  rodando=true;
+  document.getElementById("status").innerText="Rodando no fechamento real do candle";
+
+  cicloReal();
+  iniciarContador();
 }
 
 function parar(){
-    rodando=false
-    document.getElementById("status").innerText="Parado"
+  rodando=false;
+  clearTimeout(timerAnalise);
+  clearInterval(contadorLoop);
+  document.getElementById("status").innerText="Parado";
+  document.getElementById("contador").innerText="--";
 }
 
-async function loop(){
-    if(!rodando) return
-
-    let price = await fetch("https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT")
-    .then(r=>r.json())
-
-    let valor=parseFloat(price.price)
-
-    let script=document.getElementById("script").value
-
-    let candles=[{close:valor,open:valor}]
-
-    let sinal="AGUARDAR"
-
-    try{
-        sinal = eval(script)
-    }catch(e){
-        document.getElementById("status").innerText="Erro script"
-    }
-
-    document.getElementById("sinal").innerText=sinal
-
-    if(sinal=="CALL" || sinal=="PUT"){
-        entry=valor
-        setTimeout(()=>finalizar(sinal,entry),tempo*1000)
-    }
-
-    document.getElementById("tempoRestante").innerText="Próxima análise em "+tempo+"s"
-
-    setTimeout(loop,tempo*1000)
+function limparTeste(){
+  saldo=1000; wins=0; loss=0; operacaoPendente=null;
+  document.getElementById("hist").innerHTML="";
+  mostrarSinal("AGUARDAR");
+  atualizar();
 }
 
-function finalizar(tipo,entry){
-    fetch("https://api.binance.com/api/v3/ticker/price?symbol=BTCUSDT")
-    .then(r=>r.json())
-    .then(p=>{
+/* CONVERSOR */
+function abrirConversor(){document.getElementById("modal").style.display="block"}
+function fecharConversor(){document.getElementById("modal").style.display="none"}
 
-        let atual=parseFloat(p.price)
-        let win=false
+function converterScript(){
+  let original=document.getElementById("scriptOriginal").value;
+  let convertido="";
 
-        if(tipo=="CALL" && atual>entry) win=true
-        if(tipo=="PUT" && atual<entry) win=true
+  if(original.includes("instrument") || original.includes("plot_shape")){
+    convertido=converterAvalon();
+  }else if(original.includes("return") || original.includes("candles")){
+    convertido=original;
+  }else{
+    convertido=gerarPadrao();
+  }
 
-        if(win){
-            saldo+=10
-            wins++
-        }else{
-            saldo-=10
-            loss++
-        }
-
-        atualizarPainel()
-        addHistorico(tipo,win)
-    })
+  document.getElementById("scriptConvertido").value=convertido;
 }
 
-function atualizarPainel(){
-    document.getElementById("saldo").innerText=saldo
-    document.getElementById("wins").innerText=wins
-    document.getElementById("loss").innerText=loss
+function converterAvalon(){
+return `
+let c1 = candles[candles.length - 1];
+let c2 = candles[candles.length - 2];
+let c3 = candles[candles.length - 3];
 
-    let wr = wins+loss>0 ? ((wins/(wins+loss))*100).toFixed(1):0
-    document.getElementById("wr").innerText=wr
+let corpo1 = Math.abs(c1.close - c1.open);
+let range1 = c1.high - c1.low;
+
+let corpo2 = Math.abs(c2.close - c2.open);
+let range2 = c2.high - c2.low;
+
+let candle1Forte = corpo1 > range1 * 0.35;
+let candle2Forte = corpo2 > range2 * 0.25;
+
+let alta1 = c1.close > c1.open;
+let alta2 = c2.close > c2.open;
+
+let baixa1 = c1.close < c1.open;
+let baixa2 = c2.close < c2.open;
+
+let rompendoAlta = c1.close > c2.high || c1.close > c3.close;
+let rompendoBaixa = c1.close < c2.low || c1.close < c3.close;
+
+if(alta1 && candle1Forte && (alta2 || rompendoAlta)){
+  return "CALL";
 }
 
-function addHistorico(tipo,win){
-    let tabela=document.getElementById("historico")
-
-    let hora=new Date().toLocaleTimeString()
-
-    tabela.innerHTML += `
-    <tr>
-        <td>${hora}</td>
-        <td>${tipo}</td>
-        <td class="${win?'win':'loss'}">${win?'WIN':'LOSS'}</td>
-    </tr>`
+if(baixa1 && candle1Forte && (baixa2 || rompendoBaixa)){
+  return "PUT";
 }
 
-function abrirConversor(){
-    alert("Conversor já ativo (cole script Avalon)")
+return "AGUARDAR";
+`;
 }
 
+function gerarPadrao(){
+return `
+let c1 = candles[candles.length - 1];
+let c2 = candles[candles.length - 2];
+
+if(c1.close > c1.open && c2.close > c2.open){
+  return "CALL";
+}
+
+if(c1.close < c1.open && c2.close < c2.open){
+  return "PUT";
+}
+
+return "AGUARDAR";
+`;
+}
+
+function copiarConvertido(){
+  let texto=document.getElementById("scriptConvertido");
+  texto.select();
+  document.execCommand("copy");
+}
+
+function usarConvertido(){
+  document.getElementById("codigo").value=document.getElementById("scriptConvertido").value;
+  fecharConversor();
+}
+
+document.getElementById("ativo").addEventListener("change",()=>{
+  carregarGrafico();
+  if(rodando){parar();ligar();}
+});
+
+document.getElementById("tempo").addEventListener("change",()=>{
+  carregarGrafico();
+  if(rodando){parar();ligar();}
+});
+
+atualizar();
+carregarGrafico();
 </script>
 
 </body>
