@@ -13,21 +13,26 @@ body {
   text-align:center;
 }
 
-.container {
-  margin-top:80px;
-}
-
 .card {
   background:#1e1e2f;
-  width:350px;
-  margin:auto;
+  width:380px;
+  margin:80px auto;
   padding:20px;
   border-radius:15px;
   box-shadow:0 0 20px rgba(0,0,0,0.5);
 }
 
-h1 {
-  margin-bottom:30px;
+.stats {
+  display:flex;
+  justify-content:space-around;
+  margin-top:15px;
+}
+
+.box {
+  background:#111;
+  padding:10px;
+  border-radius:10px;
+  width:70px;
 }
 
 input, textarea {
@@ -39,8 +44,7 @@ input, textarea {
 }
 
 button {
-  background:#00ff88;
-  color:black;
+  margin-top:10px;
   padding:10px 20px;
   border:none;
   border-radius:8px;
@@ -48,24 +52,18 @@ button {
   cursor:pointer;
 }
 
-button:hover {
-  background:#00cc6a;
-}
+.start { background:#00ff88; color:black; }
+.stop { background:red; color:white; }
 
-.status {
+.log {
   margin-top:20px;
-}
-
-.stats {
-  display:flex;
-  justify-content:space-around;
-  margin-top:20px;
-}
-
-.box {
   background:#111;
+  height:120px;
+  overflow:auto;
   padding:10px;
   border-radius:10px;
+  text-align:left;
+  font-size:12px;
 }
 </style>
 
@@ -75,58 +73,94 @@ button:hover {
 
 <h1>🚀 Robô Trader PRO</h1>
 
-<div class="container">
-
 <div class="card">
 
 <h3>Conta Demo</h3>
 
 <div class="stats">
-<div class="box">Saldo<br><b id="saldo">R$1000</b></div>
-<div class="box">Win Rate<br><b id="win">0%</b></div>
+<div class="box">Saldo<br><b id="saldo">1000</b></div>
+<div class="box">Lucro<br><b id="lucro">0</b></div>
+<div class="box">Win<br><b id="win">0%</b></div>
+</div>
+
+<div class="stats">
+<div class="box">Win<br><b id="wins">0</b></div>
+<div class="box">Loss<br><b id="loss">0</b></div>
 </div>
 
 <input id="ativo" placeholder="Digite o ativo">
-
 <textarea id="script" placeholder="Cole seu script aqui"></textarea>
 
-<button onclick="executar()">Iniciar Robô</button>
+<button class="start" onclick="start()">Ligar Robô</button>
+<button class="stop" onclick="stop()">Desligar</button>
 
-<h2 class="status" id="status">Aguardando...</h2>
+<h3 id="status">Aguardando...</h3>
 
-</div>
+<div class="log" id="log"></div>
 
 </div>
 
 <script>
 
+let saldo = 1000;
 let wins = 0;
-let total = 0;
+let loss = 0;
+let rodando = false;
+let loop;
 
-function executar() {
+function start(){
   let ativo = document.getElementById("ativo").value;
   let script = document.getElementById("script").value;
 
   if(!ativo || !script){
-    document.getElementById("status").innerText = "Preencha tudo!";
+    alert("Preencha tudo!");
     return;
   }
 
-  document.getElementById("status").innerText = "Operando em " + ativo;
+  rodando = true;
+  document.getElementById("status").innerText = "Robô ativo";
 
-  setInterval(()=>{
-    total++;
+  loop = setInterval(()=>{
+    if(!rodando) return;
+
     let resultado = Math.random() > 0.4;
 
     if(resultado){
+      saldo += 10;
       wins++;
-      document.getElementById("saldo").innerText = "R$ " + (1000 + wins*10);
+      addLog("WIN +10");
+    } else {
+      saldo -= 10;
+      loss++;
+      addLog("LOSS -10");
     }
 
-    let porcentagem = ((wins/total)*100).toFixed(1);
-    document.getElementById("win").innerText = porcentagem + "%";
+    atualizar();
 
   },2000);
+}
+
+function stop(){
+  rodando = false;
+  clearInterval(loop);
+  document.getElementById("status").innerText = "Parado";
+}
+
+function atualizar(){
+  document.getElementById("saldo").innerText = saldo;
+  document.getElementById("lucro").innerText = saldo - 1000;
+
+  let total = wins + loss;
+  let porcentagem = total ? ((wins/total)*100).toFixed(1) : 0;
+
+  document.getElementById("win").innerText = porcentagem + "%";
+  document.getElementById("wins").innerText = wins;
+  document.getElementById("loss").innerText = loss;
+}
+
+function addLog(msg){
+  let log = document.getElementById("log");
+  log.innerHTML = msg + "<br>" + log.innerHTML;
 }
 
 </script>
