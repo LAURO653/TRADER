@@ -19,6 +19,7 @@ body{margin:0;background:#000;color:#d4af37;font-family:Arial;display:flex}
 button{border:0;padding:12px 30px;border-radius:8px;font-weight:bold;cursor:pointer}
 .ligar{background:#00b050;color:white}
 .parar{background:#c00000;color:white}
+select{background:#111;color:#d4af37;border:1px solid #d4af37;padding:10px;border-radius:8px}
 .grid{display:grid;grid-template-columns:2fr 1fr;gap:20px}
 .box{border:1px solid #d4af37;border-radius:12px;padding:20px;background:#080808}
 canvas{width:100%;height:350px;background:#020202;border-radius:8px}
@@ -46,8 +47,8 @@ td{padding:6px}
   <div class="conta">
     Conta Demo<br><br>
     <b>R$ <span id="saldoLateral">1000</span></b><br><br>
-    Meta: R$ 80<br>
-    Stop: -R$ 60
+    Preço Real<br>
+    <b id="precoAtual">0.00</b>
   </div>
 </div>
 
@@ -67,6 +68,14 @@ td{padding:6px}
   </div>
 
   <div class="controls">
+    Ativo:
+    <select id="ativo">
+      <option value="BTCUSDT">BTC/USDT</option>
+      <option value="ETHUSDT">ETH/USDT</option>
+      <option value="BNBUSDT">BNB/USDT</option>
+      <option value="SOLUSDT">SOL/USDT</option>
+    </select>
+
     <button class="ligar" onclick="ligar()">Ligar Robô</button>
     <button class="parar" onclick="parar()">Parar</button>
     <span id="status" style="margin-left:20px;">Aguardando...</span>
@@ -74,7 +83,7 @@ td{padding:6px}
 
   <div class="grid">
     <div class="box">
-      <h2>Gráfico de Desempenho</h2>
+      <h2>Gráfico de Preço Real</h2>
       <canvas id="grafico" width="900" height="350"></canvas>
     </div>
 
@@ -95,14 +104,26 @@ let vitorias = 0;
 let derrotas = 0;
 let rodando = false;
 let intervalo = null;
-let pontos = [1000];
-
-let preco = 1000;
-let historicoPreco = [1000];
+let pontos = [];
 
 let metaLucro = 80;
 let stopLoss = -60;
-let maxOperacoes = 30;
+let historicoPreco = [];
+
+async function buscarPrecoReal(){
+  try{
+    let ativo = document.getElementById("ativo").value;
+    let url = "https://api.binance.com/api/v3/ticker/price?symbol=" + ativo;
+    let resposta = await fetch(url);
+    let dados = await resposta.json();
+
+    if(!dados.price) return null;
+
+    return parseFloat(dados.price);
+  }catch(e){
+    return null;
+  }
+}
 
 function atualizarTela(){
   let lucro = saldo - saldoInicial;
@@ -128,11 +149,6 @@ function atualizarTela(){
     parar();
     document.getElementById("status").innerText = "Stop atingido ❌";
   }
-
-  if(total >= maxOperacoes){
-    parar();
-    document.getElementById("status").innerText = "Limite de operações atingido";
-  }
 }
 
 function desenharGrafico(){
@@ -140,7 +156,6 @@ function desenharGrafico(){
   let ctx = canvas.getContext("2d");
 
   ctx.clearRect(0,0,canvas.width,canvas.height);
-
   ctx.fillStyle = "#020202";
   ctx.fillRect(0,0,canvas.width,canvas.height);
 
@@ -155,85 +170,72 @@ function desenharGrafico(){
     ctx.stroke();
   }
 
-  let min = Math.min(...pontos) - 20;
-  let max = Math.max(...pontos) + 20;
+  if(pontos.length < 2) return;
+
+  let min = Math.min(...pontos);
+  let max = Math.max(...pontos);
+
+  if(min === max){
+    min = min - 1;
+    max = max + 1;
+  }
 
   ctx.strokeStyle = "#d4af37";
   ctx.lineWidth = 3;
   ctx.beginPath();
 
   pontos.forEach((valor, i)=>{
-    let x = (i / (pontos.length - 1 || 1)) * canvas.width;
+    let x = (i / (pontos.length - 1)) * canvas.width;
     let y = canvas.height - ((valor - min) / (max - min)) * canvas.height;
 
-    if(i === 0){ ctx.moveTo(x,y); }
-    else{ ctx.lineTo(x,y); }
+    if(i === 0) ctx.moveTo(x,y);
+    else ctx.lineTo(x,y);
   });
 
   ctx.stroke();
 }
 
-function simularPreco(){
-  let movimento = (Math.random() - 0.48) * 12;
-  preco += movimento;
-
-  historicoPreco.push(preco);
-
-  if(historicoPreco.length > 20){
-    historicoPreco.shift();
-  }
-}
-
 function inteligencia(){
-  if(historicoPreco.length < 6){
-    return "AGUARDAR";
-  }
+  if(historicoPreco.length < 5) return "AGUARDAR";
 
   let p1 = historicoPreco[historicoPreco.length - 1];
   let p2 = historicoPreco[historicoPreco.length - 2];
   let p3 = historicoPreco[historicoPreco.length - 3];
-  let p4 = historicoPreco[historicoPreco.length - 4];
 
   let alta = p1 > p2 && p2 > p3;
   let baixa = p1 < p2 && p2 < p3;
-  let forca = Math.abs(p1 - p4);
 
-  if(forca < 4){
-    return "AGUARDAR";
-  }
-
-  if(alta){
-    return "CALL";
-  }
-
-  if(baixa){
-    return "PUT";
-  }
+  if(alta) return "CALL";
+  if(baixa) return "PUT";
 
   return "AGUARDAR";
 }
 
-function operar(){
-  simularPreco();
+async function operar(){
+  let preco = await buscarPrecoReal();
+
+  if(!preco){
+    document.getElementById("status").innerText = "Erro ao buscar preço";
+    return;
+  }
+
+  document.getElementById("precoAtual").innerText = preco.toFixed(2);
+
+  historicoPreco.push(preco);
+  pontos.push(preco);
+
+  if(historicoPreco.length > 20) historicoPreco.shift();
+  if(pontos.length > 50) pontos.shift();
 
   let sinal = inteligencia();
 
   if(sinal === "AGUARDAR"){
     adicionarHistorico("AGUARDAR", "neutro", "Sem entrada");
+    atualizarTela();
     return;
   }
 
-  let chance = 0.68;
-
-  if(sinal === "CALL" && preco > historicoPreco[historicoPreco.length - 2]){
-    chance = 0.75;
-  }
-
-  if(sinal === "PUT" && preco < historicoPreco[historicoPreco.length - 2]){
-    chance = 0.75;
-  }
-
-  let ganhou = Math.random() < chance;
+  let ganhou = Math.random() < 0.65;
 
   if(ganhou){
     saldo += 10;
@@ -245,23 +247,18 @@ function operar(){
     adicionarHistorico("LOSS", "loss", sinal);
   }
 
-  pontos.push(saldo);
-
-  if(pontos.length > 40){
-    pontos.shift();
-  }
-
   atualizarTela();
 }
 
 function adicionarHistorico(resultado, classe, direcao){
   let historico = document.getElementById("historico");
   let hora = new Date().toLocaleTimeString();
+  let ativo = document.getElementById("ativo").value;
 
   historico.innerHTML =
     `<tr>
       <td>${hora}</td>
-      <td>EUR/USD</td>
+      <td>${ativo}</td>
       <td>${direcao}</td>
       <td class="${classe}">${resultado}</td>
     </tr>` + historico.innerHTML;
@@ -271,9 +268,9 @@ function ligar(){
   if(rodando) return;
 
   rodando = true;
-  document.getElementById("status").innerText = "Robô analisando mercado...";
+  document.getElementById("status").innerText = "Buscando preço real...";
 
-  intervalo = setInterval(operar, 1500);
+  intervalo = setInterval(operar, 2000);
 }
 
 function parar(){
