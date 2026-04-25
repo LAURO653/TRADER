@@ -10,13 +10,11 @@
 body{
     margin:0;
     background:#0b0b0b;
-    color:#fff;
     font-family:Arial;
 }
-
 #tvchart{
     width:100%;
-    height:700px;
+    height:720px;
 }
 </style>
 </head>
@@ -30,7 +28,7 @@ body{
 new TradingView.widget({
     container_id: "tvchart",
     width: "100%",
-    height: 700,
+    height: 720,
 
     symbol: "BINANCE:BTCUSDT",
     interval: "1",
@@ -38,15 +36,13 @@ new TradingView.widget({
     timezone: "America/Sao_Paulo",
     theme: "dark",
     style: "1",
-
     locale: "br",
 
-    toolbar_bg: "#0b0b0b",
+    autosize: true,
 
+    // 🔥 ESSENCIAL PRA FICAR IGUAL CORRETORA
     hide_top_toolbar: false,
     hide_side_toolbar: false,
-
-    autosize: true,
 
     overrides: {
 
@@ -57,7 +53,7 @@ new TradingView.widget({
         "paneProperties.vertGridProperties.color": "#1a1a1a",
         "paneProperties.horzGridProperties.color": "#1a1a1a",
 
-        // CANDLES PROFISSIONAIS
+        // 🔥 CANDLES IGUAL POLARIUM
         "mainSeriesProperties.candleStyle.upColor": "#00c087",
         "mainSeriesProperties.candleStyle.downColor": "#ff3b3b",
 
@@ -67,11 +63,14 @@ new TradingView.widget({
         "mainSeriesProperties.candleStyle.wickUpColor": "#00c087",
         "mainSeriesProperties.candleStyle.wickDownColor": "#ff3b3b",
 
-        // ESPESSURA E ESPAÇAMENTO (ESSENCIAL)
-        "mainSeriesProperties.candleStyle.barSpacing": 20,
+        // 🔥 ISSO AQUI É O SEGREDO
+        "mainSeriesProperties.candleStyle.barSpacing": 25,
 
-        // ESCALA AUTOMÁTICA
+        // 🔥 ESCALA AJUSTADA (resolve candles pequenos)
         "mainSeriesProperties.priceAxisProperties.autoScale": true,
+
+        // 🔥 REMOVE ESPAÇO MORTO
+        "paneProperties.rightBarStaysOnScroll": true,
 
         // TEXTO
         "scalesProperties.textColor": "#AAA"
