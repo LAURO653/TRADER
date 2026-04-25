@@ -5,122 +5,20 @@
 <title>LAURO TESTADOR PRO</title>
 
 <style>
-body{
-  margin:0;
-  background:#070707;
-  color:white;
-  font-family:Arial;
-}
-
-.container{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:15px;
-  padding:18px;
-}
-
-.card{
-  background:#111;
-  border:1px solid #d4af37;
-  border-radius:12px;
-  padding:15px;
-}
-
-h2{
-  color:#d4af37;
-  margin-top:0;
-}
-
-textarea{
-  width:100%;
-  height:250px;
-  background:#000;
-  color:#00ff66;
-  border:1px solid #d4af37;
-  border-radius:8px;
-  padding:10px;
-  font-family:monospace;
-  box-sizing:border-box;
-}
-
-select,input{
-  background:#000;
-  color:#d4af37;
-  border:1px solid #d4af37;
-  padding:10px;
-  border-radius:8px;
-}
-
-button{
-  padding:12px 20px;
-  border:none;
-  border-radius:8px;
-  font-weight:bold;
-  cursor:pointer;
-  margin:3px;
-}
-
-.ligar{background:#00c853;color:#000;}
-.parar{background:#d50000;color:white;}
-.converter{background:#d4af37;color:#000;}
-.copy{background:#333;color:white;}
-
-.sinal{
-  text-align:center;
-  font-size:70px;
-  font-weight:bold;
-}
-
-.call{color:#00ff66;}
-.put{color:#ff3333;}
-.wait{color:#aaa;}
-
-table{
-  width:100%;
-  font-size:14px;
-}
-
-td{
-  padding:6px;
-}
-
-.win{color:#00ff66;}
-.loss{color:red;}
-
-.modal{
-  display:none;
-  position:fixed;
-  top:0;
-  left:0;
-  width:100%;
-  height:100%;
-  background:rgba(0,0,0,0.85);
-  z-index:999;
-}
-
-.modal-content{
-  background:#111;
-  border:2px solid #d4af37;
-  border-radius:12px;
-  width:85%;
-  height:85%;
-  margin:35px auto;
-  padding:20px;
-  box-sizing:border-box;
-  overflow:auto;
-}
-
-.modal-grid{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:15px;
-}
-
-.close{
-  float:right;
-  background:#d50000;
-  color:white;
-}
+body{margin:0;background:#070707;color:white;font-family:Arial}
+.container{display:grid;grid-template-columns:1fr 1fr;gap:15px;padding:18px}
+.card{background:#111;border:1px solid #d4af37;border-radius:12px;padding:15px}
+h2{color:#d4af37;margin-top:0}
+textarea{width:100%;height:250px;background:#000;color:#00ff66;border:1px solid #d4af37;border-radius:8px;padding:10px;font-family:monospace;box-sizing:border-box}
+select,input{background:#000;color:#d4af37;border:1px solid #d4af37;padding:10px;border-radius:8px}
+button{padding:12px 20px;border:none;border-radius:8px;font-weight:bold;cursor:pointer;margin:3px}
+.ligar{background:#00c853;color:#000}.parar{background:#d50000;color:white}.converter{background:#d4af37;color:#000}.copy{background:#333;color:white}
+.sinal{text-align:center;font-size:70px;font-weight:bold}
+.call{color:#00ff66}.put{color:#ff3333}.wait{color:#aaa}
+table{width:100%;font-size:14px}td{padding:6px}.win{color:#00ff66}.loss{color:red}
+.modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.85);z-index:999}
+.modal-content{background:#111;border:2px solid #d4af37;border-radius:12px;width:85%;height:85%;margin:35px auto;padding:20px;box-sizing:border-box;overflow:auto}
+.modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}.close{float:right;background:#d50000;color:white}
 </style>
 </head>
 
@@ -131,47 +29,44 @@ td{
 <div class="card">
 <h2>TESTADOR DE SCRIPT</h2>
 
-<button class="converter" onclick="abrirConversor()">🔄 Converter Script</button>
-
-<br><br>
+<button class="converter" onclick="abrirConversor()">🔄 Converter Script</button><br><br>
 
 Ativo:
 <select id="ativo">
-  <option value="BTCUSDT">Bitcoin BTC/USDT</option>
-  <option value="ETHUSDT">Ethereum ETH/USDT</option>
-  <option value="SOLUSDT">Solana SOL/USDT</option>
+<option value="BTCUSDT">Bitcoin BTC/USDT</option>
+<option value="ETHUSDT">Ethereum ETH/USDT</option>
+<option value="SOLUSDT">Solana SOL/USDT</option>
 </select>
 
 Tempo:
 <select id="tempo">
-  <option value="1m">1 minuto</option>
-  <option value="3m">3 minutos</option>
-  <option value="5m">5 minutos</option>
+<option value="1m">1 minuto</option>
+<option value="3m">3 minutos</option>
+<option value="5m">5 minutos</option>
 </select>
 
 <br><br>
-
 <button class="ligar" onclick="ligar()">LIGAR TESTE</button>
 <button class="parar" onclick="parar()">PARAR</button>
 
 <p>Status: <b id="status">Parado</b></p>
+<p>Próxima análise: <b id="contador">--</b></p>
 <p>Preço atual: <b id="preco">0.00</b></p>
 </div>
 
 <div class="card">
 <h2>SINAL DO SCRIPT</h2>
 <div id="sinal" class="sinal wait">AGUARDAR</div>
-<div style="text-align:center;font-size:28px;">
-Força: <b id="forca">0%</b>
-</div>
+<div style="text-align:center;font-size:28px;">Força: <b id="forca">0%</b></div>
 </div>
 
 <div class="card">
 <h2>COLE SEU SCRIPT AQUI</h2>
-
 <textarea id="codigo">
-// FORMATO ACEITO PELO TESTADOR:
-// precisa retornar "CALL", "PUT" ou "AGUARDAR"
+// FORMATO ACEITO:
+// return "CALL";
+// return "PUT";
+// return "AGUARDAR";
 
 let c1 = candles[candles.length - 1];
 let c2 = candles[candles.length - 2];
@@ -202,7 +97,6 @@ return "AGUARDAR";
 
 <div class="card">
 <h2>RESULTADO</h2>
-
 Saldo: <b id="saldo">1000</b><br>
 Lucro: <b id="lucro">0</b><br>
 WinRate: <b id="wr">0%</b><br>
@@ -210,210 +104,183 @@ Wins: <b id="wins">0</b><br>
 Loss: <b id="loss">0</b>
 
 <h2>HISTÓRICO</h2>
-<table>
-<tbody id="hist"></tbody>
-</table>
+<table><tbody id="hist"></tbody></table>
 </div>
 
 </div>
 
-<!-- MODAL CONVERSOR -->
 <div id="modal" class="modal">
-  <div class="modal-content">
+<div class="modal-content">
+<button class="close" onclick="fecharConversor()">X</button>
+<h2>CONVERSOR DE SCRIPT</h2>
 
-    <button class="close" onclick="fecharConversor()">X</button>
-    <h2>CONVERSOR DE SCRIPT PARA O TESTADOR</h2>
+<div class="modal-grid">
+<div>
+<h3>Script original</h3>
+<textarea id="scriptOriginal"></textarea>
+<button class="converter" onclick="converterScript()">Converter</button>
+</div>
 
-    <div class="modal-grid">
-
-      <div>
-        <h3>Script original</h3>
-        <textarea id="scriptOriginal" placeholder="Cole aqui script da Avalon, Profit, Pine ou outro..."></textarea>
-
-        <br><br>
-
-        <button class="converter" onclick="converterScript()">Converter</button>
-      </div>
-
-      <div>
-        <h3>Script convertido</h3>
-        <textarea id="scriptConvertido"></textarea>
-
-        <br><br>
-
-        <button class="copy" onclick="copiarConvertido()">Copiar convertido</button>
-        <button class="ligar" onclick="usarConvertido()">Usar no testador</button>
-      </div>
-
-    </div>
-
-    <p style="color:#aaa;">
-      Obs: o conversor identifica scripts da Avalon básicos e transforma a lógica principal em JavaScript para o testador.
-    </p>
-
-  </div>
+<div>
+<h3>Script convertido</h3>
+<textarea id="scriptConvertido"></textarea>
+<button class="copy" onclick="copiarConvertido()">Copiar convertido</button>
+<button class="ligar" onclick="usarConvertido()">Usar no testador</button>
+</div>
+</div>
+</div>
 </div>
 
 <script>
-let saldo = 1000;
-let wins = 0;
-let loss = 0;
-let loop = null;
-let rodando = false;
-let candles = [];
+let saldo=1000,wins=0,loss=0,loop=null,contadorLoop=null,rodando=false,candles=[];
+let segundosRestantes=0;
+
+function tempoEmSegundos(){
+  let tempo=document.getElementById("tempo").value;
+  if(tempo==="1m") return 60;
+  if(tempo==="3m") return 180;
+  if(tempo==="5m") return 300;
+  return 60;
+}
 
 async function buscarCandles(){
-  let ativo = document.getElementById("ativo").value;
-  let tempo = document.getElementById("tempo").value;
+  let ativo=document.getElementById("ativo").value;
+  let tempo=document.getElementById("tempo").value;
+  let url=`https://api.binance.com/api/v3/klines?symbol=${ativo}&interval=${tempo}&limit=50`;
+  let resposta=await fetch(url);
+  let dados=await resposta.json();
 
-  let url = `https://api.binance.com/api/v3/klines?symbol=${ativo}&interval=${tempo}&limit=50`;
-
-  let resposta = await fetch(url);
-  let dados = await resposta.json();
-
-  candles = dados.map(c => ({
-    time: c[0],
-    open: parseFloat(c[1]),
-    high: parseFloat(c[2]),
-    low: parseFloat(c[3]),
-    close: parseFloat(c[4])
+  candles=dados.map(c=>({
+    time:c[0],
+    open:parseFloat(c[1]),
+    high:parseFloat(c[2]),
+    low:parseFloat(c[3]),
+    close:parseFloat(c[4])
   }));
 
-  let ultimo = candles[candles.length - 1];
-  document.getElementById("preco").innerText = ultimo.close.toFixed(2);
+  let ultimo=candles[candles.length-1];
+  document.getElementById("preco").innerText=ultimo.close.toFixed(2);
 }
 
 function executarScript(){
   try{
-    let codigo = document.getElementById("codigo").value;
-    let funcao = new Function("candles", codigo);
-    let sinal = funcao(candles);
+    let codigo=document.getElementById("codigo").value;
+    let funcao=new Function("candles",codigo);
+    let sinal=funcao(candles);
 
-    if(sinal !== "CALL" && sinal !== "PUT" && sinal !== "AGUARDAR"){
-      sinal = "AGUARDAR";
+    if(sinal!=="CALL" && sinal!=="PUT" && sinal!=="AGUARDAR"){
+      sinal="AGUARDAR";
     }
 
     mostrarSinal(sinal);
     simularResultado(sinal);
 
   }catch(e){
-    document.getElementById("status").innerText = "Erro no script";
+    document.getElementById("status").innerText="Erro no script";
     console.log(e);
   }
 }
 
 function mostrarSinal(sinal){
-  let el = document.getElementById("sinal");
+  let el=document.getElementById("sinal");
+  el.innerText=sinal;
+  el.className="sinal "+(sinal==="CALL"?"call":sinal==="PUT"?"put":"wait");
 
-  el.innerText = sinal;
-  el.className = "sinal " + (
-    sinal === "CALL" ? "call" :
-    sinal === "PUT" ? "put" :
-    "wait"
-  );
-
-  let forca = sinal === "AGUARDAR" ? 0 : Math.floor(60 + Math.random() * 35);
-  document.getElementById("forca").innerText = forca + "%";
+  let forca=sinal==="AGUARDAR"?0:Math.floor(60+Math.random()*35);
+  document.getElementById("forca").innerText=forca+"%";
 }
 
 function simularResultado(sinal){
-  if(sinal === "AGUARDAR"){
-    addHist(sinal, "SEM ENTRADA");
+  if(sinal==="AGUARDAR"){
+    addHist(sinal,"SEM ENTRADA");
     return;
   }
 
-  let win = Math.random() < 0.62;
+  let win=Math.random()<0.62;
 
-  if(win){
-    saldo += 10;
-    wins++;
-    addHist(sinal, "WIN");
-  }else{
-    saldo -= 10;
-    loss++;
-    addHist(sinal, "LOSS");
-  }
+  if(win){saldo+=10;wins++;addHist(sinal,"WIN")}
+  else{saldo-=10;loss++;addHist(sinal,"LOSS")}
 
   atualizar();
 }
 
 function atualizar(){
-  document.getElementById("saldo").innerText = saldo;
-  document.getElementById("lucro").innerText = saldo - 1000;
-  document.getElementById("wins").innerText = wins;
-  document.getElementById("loss").innerText = loss;
+  document.getElementById("saldo").innerText=saldo;
+  document.getElementById("lucro").innerText=saldo-1000;
+  document.getElementById("wins").innerText=wins;
+  document.getElementById("loss").innerText=loss;
 
-  let total = wins + loss;
-  let wr = total ? ((wins / total) * 100).toFixed(1) : 0;
-
-  document.getElementById("wr").innerText = wr + "%";
+  let total=wins+loss;
+  let wr=total?((wins/total)*100).toFixed(1):0;
+  document.getElementById("wr").innerText=wr+"%";
 }
 
-function addHist(sinal, resultado){
-  let cor = resultado === "WIN" ? "win" : resultado === "LOSS" ? "loss" : "";
-
-  document.getElementById("hist").innerHTML =
+function addHist(sinal,resultado){
+  let cor=resultado==="WIN"?"win":resultado==="LOSS"?"loss":"";
+  document.getElementById("hist").innerHTML=
   `<tr>
     <td>${new Date().toLocaleTimeString()}</td>
     <td>${document.getElementById("ativo").value}</td>
+    <td>${document.getElementById("tempo").value}</td>
     <td>${sinal}</td>
     <td class="${cor}">${resultado}</td>
-  </tr>` + document.getElementById("hist").innerHTML;
+  </tr>`+document.getElementById("hist").innerHTML;
 }
 
 async function ciclo(){
   await buscarCandles();
   executarScript();
+  segundosRestantes=tempoEmSegundos();
 }
 
 function ligar(){
   if(rodando) return;
 
-  rodando = true;
-  document.getElementById("status").innerText = "Rodando com mercado real";
+  rodando=true;
+  document.getElementById("status").innerText="Rodando com mercado real";
 
   ciclo();
-  loop = setInterval(ciclo, 5000);
+
+  let tempo=tempoEmSegundos()*1000;
+  loop=setInterval(ciclo,tempo);
+
+  segundosRestantes=tempoEmSegundos();
+  contadorLoop=setInterval(()=>{
+    segundosRestantes--;
+    if(segundosRestantes<0) segundosRestantes=0;
+    document.getElementById("contador").innerText=segundosRestantes+"s";
+  },1000);
 }
 
 function parar(){
-  rodando = false;
+  rodando=false;
   clearInterval(loop);
-  document.getElementById("status").innerText = "Parado";
+  clearInterval(contadorLoop);
+  document.getElementById("status").innerText="Parado";
+  document.getElementById("contador").innerText="--";
 }
 
-/* ================= CONVERSOR ================= */
-
-function abrirConversor(){
-  document.getElementById("modal").style.display = "block";
-}
-
-function fecharConversor(){
-  document.getElementById("modal").style.display = "none";
-}
+/* CONVERSOR */
+function abrirConversor(){document.getElementById("modal").style.display="block"}
+function fecharConversor(){document.getElementById("modal").style.display="none"}
 
 function converterScript(){
-  let original = document.getElementById("scriptOriginal").value;
-
-  let convertido = "";
+  let original=document.getElementById("scriptOriginal").value;
+  let convertido="";
 
   if(original.includes("instrument") || original.includes("plot_shape")){
-    convertido = converterAvalon(original);
+    convertido=converterAvalon();
   }else if(original.includes("return") || original.includes("candles")){
-    convertido = original;
+    convertido=original;
   }else{
-    convertido = gerarPadrao();
+    convertido=gerarPadrao();
   }
 
-  document.getElementById("scriptConvertido").value = convertido;
+  document.getElementById("scriptConvertido").value=convertido;
 }
 
-function converterAvalon(original){
-
-  let temCall = original.includes("call") || original.includes("CALL");
-  let temPut = original.includes("put") || original.includes("PUT");
-
-  return `
+function converterAvalon(){
+return `
 // CONVERTIDO DE AVALON PARA TESTADOR JS
 
 let c1 = candles[candles.length - 1];
@@ -451,20 +318,15 @@ return "AGUARDAR";
 }
 
 function gerarPadrao(){
-  return `
-// SCRIPT PADRÃO GERADO PELO CONVERSOR
-
+return `
 let c1 = candles[candles.length - 1];
 let c2 = candles[candles.length - 2];
 
-let alta = c1.close > c1.open && c2.close > c2.open;
-let baixa = c1.close < c1.open && c2.close < c2.open;
-
-if(alta){
+if(c1.close > c1.open && c2.close > c2.open){
   return "CALL";
 }
 
-if(baixa){
+if(c1.close < c1.open && c2.close < c2.open){
   return "PUT";
 }
 
@@ -473,17 +335,15 @@ return "AGUARDAR";
 }
 
 function copiarConvertido(){
-  let texto = document.getElementById("scriptConvertido");
+  let texto=document.getElementById("scriptConvertido");
   texto.select();
   document.execCommand("copy");
 }
 
 function usarConvertido(){
-  let texto = document.getElementById("scriptConvertido").value;
-  document.getElementById("codigo").value = texto;
+  document.getElementById("codigo").value=document.getElementById("scriptConvertido").value;
   fecharConversor();
 }
-
 </script>
 
 </body>
