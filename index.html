@@ -2,82 +2,381 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<title>LAURO TRADER</title>
-
-<script src="https://s3.tradingview.com/tv.js"></script>
+<title>LAURO TRADER PRO</title>
 
 <style>
 body{
-    margin:0;
-    background:#0b0b0b;
-    font-family:Arial;
+  margin:0;
+  background:#050505;
+  color:white;
+  font-family:Arial;
+  display:flex;
 }
-#tvchart{
-    width:100%;
-    height:720px;
+
+.sidebar{
+  width:250px;
+  min-height:100vh;
+  background:#050505;
+  border-right:2px solid #d4af37;
+  padding:22px;
+  box-sizing:border-box;
+}
+
+.logo{
+  font-size:34px;
+  color:#d4af37;
+  font-weight:bold;
+  margin-bottom:35px;
+}
+
+.menu div{
+  margin:18px 0;
+  font-size:18px;
+  color:#ddd;
+}
+
+.conta{
+  margin-top:70px;
+  border:1px solid #d4af37;
+  border-radius:12px;
+  padding:18px;
+  background:#080808;
+}
+
+.main{
+  flex:1;
+  padding:14px;
+}
+
+.cards{
+  display:grid;
+  grid-template-columns:repeat(5,1fr);
+  gap:10px;
+  margin-bottom:10px;
+}
+
+.card{
+  background:#080808;
+  border:1px solid #d4af37;
+  border-radius:10px;
+  padding:10px;
+  font-size:14px;
+}
+
+.valor{
+  font-size:17px;
+  font-weight:bold;
+}
+
+.green{color:#00ff66;}
+.red{color:red;}
+
+.controls{
+  border:1px solid #d4af37;
+  border-radius:10px;
+  padding:10px;
+  background:#080808;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-bottom:10px;
+}
+
+select{
+  background:#111;
+  color:#d4af37;
+  border:1px solid #d4af37;
+  padding:10px;
+  border-radius:8px;
+  font-weight:bold;
+}
+
+button{
+  border:0;
+  padding:11px 24px;
+  border-radius:8px;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+.ligar{background:#00b050;color:white;}
+.parar{background:#c00000;color:white;}
+
+.chart-box{
+  border:2px solid #d4af37;
+  border-radius:14px;
+  background:#111;
+  padding:10px;
+}
+
+canvas{
+  width:100%;
+  height:760px;
+  background:#18191d;
+  border-radius:10px;
 }
 </style>
 </head>
 
 <body>
 
-<div id="tvchart"></div>
+<div class="sidebar">
+  <div class="logo">LAURO</div>
+
+  <div class="menu">
+    <div>📊 Dashboard</div>
+    <div>🤖 Robôs</div>
+    <div>📈 Sinais</div>
+    <div>🎓 Aulas</div>
+    <div>💎 Planos</div>
+  </div>
+
+  <div class="conta">
+    Conta Demo<br><br>
+    <b>R$ <span id="saldoLateral">1000</span></b><br><br>
+    Preço Atual:<br>
+    <b id="precoAtual">0.00</b>
+  </div>
+</div>
+
+<div class="main">
+
+  <div class="cards">
+    <div class="card">Saldo<div class="valor">R$ <span id="saldo">1000</span></div></div>
+    <div class="card">Lucro<div class="valor" id="lucro">0</div></div>
+    <div class="card">Taxa de vitórias<div class="valor green" id="winrate">0%</div></div>
+    <div class="card">Vitórias<div class="valor green" id="wins">0</div></div>
+    <div class="card">Derrotas<div class="valor red" id="loss">0</div></div>
+  </div>
+
+  <div class="controls">
+    Ativo:
+    <select id="ativo">
+      <option value="BTCUSDT">Bitcoin BTC/USDT</option>
+      <option value="ETHUSDT">Ethereum ETH/USDT</option>
+      <option value="SOLUSDT">Solana SOL/USDT</option>
+    </select>
+
+    Tempo:
+    <select id="tempo">
+      <option value="1m">1 minuto</option>
+      <option value="3m">3 minutos</option>
+      <option value="5m">5 minutos</option>
+    </select>
+
+    <button class="ligar" onclick="ligar()">▶ Ligar Robô</button>
+    <button class="parar" onclick="parar()">■ Parar</button>
+
+    <span id="status">Aguardando...</span>
+  </div>
+
+  <div class="chart-box">
+    <canvas id="grafico" width="1600" height="760"></canvas>
+  </div>
+
+</div>
 
 <script>
+let saldo = 1000;
+let saldoInicial = 1000;
+let wins = 0;
+let loss = 0;
+let rodando = false;
+let loop = null;
+let candles = [];
 
-new TradingView.widget({
-    container_id: "tvchart",
-    width: "100%",
-    height: 720,
+async function buscarCandles(){
+  try{
+    let ativo = document.getElementById("ativo").value;
+    let tempo = document.getElementById("tempo").value;
 
-    symbol: "BINANCE:BTCUSDT",
-    interval: "1",
+    let url = `https://api.binance.com/api/v3/klines?symbol=${ativo}&interval=${tempo}&limit=45`;
+    let resposta = await fetch(url);
+    let dados = await resposta.json();
 
-    timezone: "America/Sao_Paulo",
-    theme: "dark",
-    style: "1",
-    locale: "br",
+    candles = dados.map(c => ({
+      time: c[0],
+      open: parseFloat(c[1]),
+      high: parseFloat(c[2]),
+      low: parseFloat(c[3]),
+      close: parseFloat(c[4])
+    }));
 
-    autosize: true,
+    let ultimo = candles[candles.length - 1];
+    document.getElementById("precoAtual").innerText = ultimo.close.toFixed(2);
 
-    // 🔥 ESSENCIAL PRA FICAR IGUAL CORRETORA
-    hide_top_toolbar: false,
-    hide_side_toolbar: false,
+    desenharGrafico();
+  }catch(e){
+    document.getElementById("status").innerText = "Erro ao carregar candles";
+  }
+}
 
-    overrides: {
+function desenharGrafico(){
+  let canvas = document.getElementById("grafico");
+  let ctx = canvas.getContext("2d");
 
-        // FUNDO
-        "paneProperties.background": "#0f0f0f",
+  ctx.clearRect(0,0,canvas.width,canvas.height);
 
-        // GRID SUAVE
-        "paneProperties.vertGridProperties.color": "#1a1a1a",
-        "paneProperties.horzGridProperties.color": "#1a1a1a",
+  ctx.fillStyle = "#18191d";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
 
-        // 🔥 CANDLES IGUAL POLARIUM
-        "mainSeriesProperties.candleStyle.upColor": "#00c087",
-        "mainSeriesProperties.candleStyle.downColor": "#ff3b3b",
+  if(candles.length === 0) return;
 
-        "mainSeriesProperties.candleStyle.borderUpColor": "#00c087",
-        "mainSeriesProperties.candleStyle.borderDownColor": "#ff3b3b",
+  let max = Math.max(...candles.map(c => c.high));
+  let min = Math.min(...candles.map(c => c.low));
 
-        "mainSeriesProperties.candleStyle.wickUpColor": "#00c087",
-        "mainSeriesProperties.candleStyle.wickDownColor": "#ff3b3b",
+  let margem = (max - min) * 0.15;
+  max += margem;
+  min -= margem;
 
-        // 🔥 ISSO AQUI É O SEGREDO
-        "mainSeriesProperties.candleStyle.barSpacing": 25,
+  desenharGrid(ctx, canvas, min, max);
 
-        // 🔥 ESCALA AJUSTADA (resolve candles pequenos)
-        "mainSeriesProperties.priceAxisProperties.autoScale": true,
+  let areaTopo = 35;
+  let areaBaixo = 45;
+  let alturaUtil = canvas.height - areaTopo - areaBaixo;
 
-        // 🔥 REMOVE ESPAÇO MORTO
-        "paneProperties.rightBarStaysOnScroll": true,
+  let larguraCandle = canvas.width / candles.length;
+  let corpo = larguraCandle * 0.48;
 
-        // TEXTO
-        "scalesProperties.textColor": "#AAA"
-    }
+  candles.forEach((c, i) => {
+    let x = i * larguraCandle + larguraCandle / 2;
 
-});
+    let yOpen = escala(c.open, min, max, alturaUtil, areaTopo);
+    let yClose = escala(c.close, min, max, alturaUtil, areaTopo);
+    let yHigh = escala(c.high, min, max, alturaUtil, areaTopo);
+    let yLow = escala(c.low, min, max, alturaUtil, areaTopo);
 
+    let alta = c.close >= c.open;
+    let cor = alta ? "#55c044" : "#ff2f3a";
+
+    ctx.strokeStyle = cor;
+    ctx.fillStyle = cor;
+    ctx.lineWidth = 2;
+
+    ctx.beginPath();
+    ctx.moveTo(x, yHigh);
+    ctx.lineTo(x, yLow);
+    ctx.stroke();
+
+    let topo = Math.min(yOpen, yClose);
+    let altura = Math.abs(yClose - yOpen);
+
+    if(altura < 6) altura = 6;
+
+    ctx.fillRect(x - corpo/2, topo, corpo, altura);
+  });
+
+  desenharPrecoAtual(ctx, canvas, candles[candles.length - 1].close, min, max, alturaUtil, areaTopo);
+}
+
+function desenharGrid(ctx, canvas, min, max){
+  ctx.strokeStyle = "#33363d";
+  ctx.lineWidth = 1;
+  ctx.font = "14px Arial";
+  ctx.fillStyle = "#bfc3c9";
+
+  for(let i=0; i<=8; i++){
+    let y = (canvas.height / 9) * i + 25;
+
+    ctx.beginPath();
+    ctx.moveTo(0,y);
+    ctx.lineTo(canvas.width,y);
+    ctx.stroke();
+
+    let preco = max - ((max-min) / 8) * i;
+    ctx.fillText(preco.toFixed(2), canvas.width - 90, y - 5);
+  }
+
+  for(let i=0; i<=10; i++){
+    let x = (canvas.width / 10) * i;
+
+    ctx.beginPath();
+    ctx.moveTo(x,0);
+    ctx.lineTo(x,canvas.height);
+    ctx.stroke();
+  }
+}
+
+function desenharPrecoAtual(ctx, canvas, preco, min, max, alturaUtil, areaTopo){
+  let y = escala(preco, min, max, alturaUtil, areaTopo);
+
+  ctx.strokeStyle = "#00c087";
+  ctx.setLineDash([4,4]);
+  ctx.beginPath();
+  ctx.moveTo(0,y);
+  ctx.lineTo(canvas.width,y);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.fillStyle = "#00c087";
+  ctx.fillRect(canvas.width - 95, y - 14, 90, 28);
+
+  ctx.fillStyle = "#fff";
+  ctx.font = "14px Arial";
+  ctx.fillText(preco.toFixed(2), canvas.width - 88, y + 5);
+}
+
+function escala(valor, min, max, altura, topo){
+  return topo + altura - ((valor - min) / (max - min)) * altura;
+}
+
+function ligar(){
+  if(rodando) return;
+
+  rodando = true;
+  document.getElementById("status").innerText = "Buscando candles reais...";
+  buscarCandles();
+
+  loop = setInterval(()=>{
+    buscarCandles();
+    operar();
+  }, 5000);
+}
+
+function parar(){
+  rodando = false;
+  clearInterval(loop);
+  document.getElementById("status").innerText = "Parado";
+}
+
+function operar(){
+  let entrada = Math.random() > 0.45;
+  if(!entrada) return;
+
+  let ganhou = Math.random() > 0.42;
+
+  if(ganhou){
+    saldo += 10;
+    wins++;
+  }else{
+    saldo -= 10;
+    loss++;
+  }
+
+  atualizar();
+}
+
+function atualizar(){
+  let lucro = saldo - saldoInicial;
+
+  document.getElementById("saldo").innerText = saldo;
+  document.getElementById("saldoLateral").innerText = saldo;
+  document.getElementById("lucro").innerText = lucro;
+  document.getElementById("lucro").className = lucro >= 0 ? "valor green" : "valor red";
+
+  document.getElementById("wins").innerText = wins;
+  document.getElementById("loss").innerText = loss;
+
+  let total = wins + loss;
+  let wr = total ? ((wins / total) * 100).toFixed(1) : 0;
+  document.getElementById("winrate").innerText = wr + "%";
+}
+
+document.getElementById("ativo").addEventListener("change", buscarCandles);
+document.getElementById("tempo").addEventListener("change", buscarCandles);
+
+atualizar();
+buscarCandles();
 </script>
 
 </body>
