@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<title>LAURO TRADER CANDLES</title>
+<title>LAURO TRADER</title>
 
 <style>
 body{margin:0;background:#000;color:#d4af37;font-family:Arial;display:flex}
@@ -65,10 +65,10 @@ td{padding:6px}
   <div class="controls">
     Ativo:
     <select id="ativo">
-      <option value="BTCUSDT">BTC/USDT</option>
-      <option value="ETHUSDT">ETH/USDT</option>
-      <option value="BNBUSDT">BNB/USDT</option>
-      <option value="SOLUSDT">SOL/USDT</option>
+      <option value="BTCUSDT">Bitcoin (BTC)</option>
+      <option value="ETHUSDT">Ethereum (ETH)</option>
+      <option value="BNBUSDT">BNB</option>
+      <option value="SOLUSDT">Solana</option>
     </select>
 
     Time:
@@ -120,7 +120,6 @@ async function buscarCandles(){
     let dados = await resposta.json();
 
     candles = dados.map(c => ({
-      time: c[0],
       open: parseFloat(c[1]),
       high: parseFloat(c[2]),
       low: parseFloat(c[3]),
@@ -131,10 +130,10 @@ async function buscarCandles(){
     document.getElementById("precoAtual").innerText = ultimo.close.toFixed(2);
 
     desenharCandles();
-    analisarMercado();
+    analisar();
 
   }catch(e){
-    document.getElementById("status").innerText = "Erro ao buscar candles reais";
+    document.getElementById("status").innerText = "Erro API";
   }
 }
 
@@ -143,147 +142,100 @@ function desenharCandles(){
   let ctx = canvas.getContext("2d");
 
   ctx.clearRect(0,0,canvas.width,canvas.height);
-  ctx.fillStyle = "#020202";
-  ctx.fillRect(0,0,canvas.width,canvas.height);
 
-  if(candles.length === 0) return;
+  let max = Math.max(...candles.map(c=>c.high));
+  let min = Math.min(...candles.map(c=>c.low));
 
-  let highs = candles.map(c => c.high);
-  let lows = candles.map(c => c.low);
+  let largura = canvas.width / candles.length;
 
-  let max = Math.max(...highs);
-  let min = Math.min(...lows);
+  candles.forEach((c,i)=>{
+    let x = i * largura + largura/2;
 
-  let margem = (max - min) * 0.1;
-  max += margem;
-  min -= margem;
+    let yOpen = escala(c.open,min,max,canvas.height);
+    let yClose = escala(c.close,min,max,canvas.height);
+    let yHigh = escala(c.high,min,max,canvas.height);
+    let yLow = escala(c.low,min,max,canvas.height);
 
-  ctx.strokeStyle = "#222";
-  ctx.lineWidth = 1;
+    let alta = c.close > c.open;
 
-  for(let i=0;i<10;i++){
-    let y = (canvas.height / 10) * i;
-    ctx.beginPath();
-    ctx.moveTo(0,y);
-    ctx.lineTo(canvas.width,y);
-    ctx.stroke();
-  }
-
-  let candleWidth = canvas.width / candles.length;
-  let corpoWidth = candleWidth * 0.55;
-
-  candles.forEach((c, i) => {
-    let x = i * candleWidth + candleWidth / 2;
-
-    let yOpen = escala(c.open, min, max, canvas.height);
-    let yClose = escala(c.close, min, max, canvas.height);
-    let yHigh = escala(c.high, min, max, canvas.height);
-    let yLow = escala(c.low, min, max, canvas.height);
-
-    let alta = c.close >= c.open;
-
-    ctx.strokeStyle = alta ? "#00ff66" : "#ff3333";
-    ctx.fillStyle = alta ? "#00ff66" : "#ff3333";
+    ctx.strokeStyle = alta ? "#00ff66" : "#ff0000";
+    ctx.fillStyle = ctx.strokeStyle;
 
     ctx.beginPath();
-    ctx.moveTo(x, yHigh);
-    ctx.lineTo(x, yLow);
+    ctx.moveTo(x,yHigh);
+    ctx.lineTo(x,yLow);
     ctx.stroke();
 
-    let topo = Math.min(yOpen, yClose);
-    let altura = Math.abs(yClose - yOpen);
-
-    if(altura < 2) altura = 2;
-
-    ctx.fillRect(x - corpoWidth/2, topo, corpoWidth, altura);
+    ctx.fillRect(x-3,Math.min(yOpen,yClose),6,Math.abs(yClose-yOpen)||2);
   });
 }
 
-function escala(valor, min, max, altura){
-  return altura - ((valor - min) / (max - min)) * altura;
+function escala(v,min,max,h){
+  return h - ((v-min)/(max-min))*h;
 }
 
-function analisarMercado(){
-  if(candles.length < 5) return;
+function analisar(){
+  if(candles.length<3) return;
 
-  let c1 = candles[candles.length - 1];
-  let c2 = candles[candles.length - 2];
-  let c3 = candles[candles.length - 3];
+  let c1 = candles.at(-1);
+  let c2 = candles.at(-2);
+  let c3 = candles.at(-3);
 
-  let direcao = "AGUARDAR";
-  let classe = "neutro";
+  let direcao="AGUARDAR";
+  let classe="neutro";
 
-  if(c1.close > c1.open && c2.close > c2.open && c3.close > c3.open){
-    direcao = "CALL";
-    classe = "alta";
+  if(c1.close>c1.open && c2.close>c2.open && c3.close>c3.open){
+    direcao="CALL"; classe="alta";
   }
 
-  if(c1.close < c1.open && c2.close < c2.open && c3.close < c3.open){
-    direcao = "PUT";
-    classe = "baixa";
+  if(c1.close<c1.open && c2.close<c2.open && c3.close<c3.open){
+    direcao="PUT"; classe="baixa";
   }
 
-  adicionarHistorico(direcao, classe);
+  addHistorico(direcao,classe);
 
-  if(direcao === "AGUARDAR") return;
+  if(direcao==="AGUARDAR") return;
 
-  let ganhou = Math.random() < 0.62;
+  let win=Math.random()<0.6;
 
-  if(ganhou){
-    saldo += 10;
-    vitorias++;
-  }else{
-    saldo -= 10;
-    derrotas++;
-  }
+  if(win){saldo+=10;vitorias++}
+  else{saldo-=10;derrotas++}
 
-  atualizarTela();
+  atualizar();
 }
 
-function adicionarHistorico(direcao, classe){
-  let historico = document.getElementById("historico");
-  let hora = new Date().toLocaleTimeString();
-  let ativo = document.getElementById("ativo").value;
+function addHistorico(dir,cls){
+  let hora=new Date().toLocaleTimeString();
+  let ativo=document.getElementById("ativo").value;
 
-  historico.innerHTML =
-    `<tr>
-      <td>${hora}</td>
-      <td>${ativo}</td>
-      <td class="${classe}">${direcao}</td>
-    </tr>` + historico.innerHTML;
+  document.getElementById("historico").innerHTML=
+  `<tr><td>${hora}</td><td>${ativo}</td><td class="${cls}">${dir}</td></tr>`
+  + document.getElementById("historico").innerHTML;
 }
 
-function atualizarTela(){
-  let lucro = saldo - saldoInicial;
+function atualizar(){
+  document.getElementById("saldo").innerText=saldo;
+  document.getElementById("saldoLateral").innerText=saldo;
+  document.getElementById("lucro").innerText=saldo-1000;
+  document.getElementById("wins").innerText=vitorias;
+  document.getElementById("loss").innerText=derrotas;
 
-  document.getElementById("saldo").innerText = saldo;
-  document.getElementById("saldoLateral").innerText = saldo;
-  document.getElementById("lucro").innerText = lucro;
-  document.getElementById("wins").innerText = vitorias;
-  document.getElementById("loss").innerText = derrotas;
-
-  let total = vitorias + derrotas;
-  let wr = total > 0 ? ((vitorias / total) * 100).toFixed(1) : 0;
-  document.getElementById("winrate").innerText = wr + "%";
+  let t=vitorias+derrotas;
+  document.getElementById("winrate").innerText=
+  t?((vitorias/t)*100).toFixed(1)+"%":"0%";
 }
 
 function ligar(){
   if(rodando) return;
-
-  rodando = true;
-  document.getElementById("status").innerText = "Buscando candles reais...";
-
+  rodando=true;
   buscarCandles();
-  intervalo = setInterval(buscarCandles, 5000);
+  intervalo=setInterval(buscarCandles,5000);
 }
 
 function parar(){
-  rodando = false;
+  rodando=false;
   clearInterval(intervalo);
-  document.getElementById("status").innerText = "Parado";
 }
-
-atualizarTela();
 </script>
 
 </body>
