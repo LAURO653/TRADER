@@ -7,14 +7,14 @@
 <style>
 body{
   margin:0;
-  background:#080808;
+  background:#050505;
   color:white;
   font-family:Arial;
   display:flex;
 }
 
 .sidebar{
-  width:280px;
+  width:260px;
   min-height:100vh;
   background:#050505;
   border-right:2px solid #d4af37;
@@ -27,7 +27,6 @@ body{
   color:#d4af37;
   font-weight:bold;
   margin-bottom:35px;
-  text-shadow:0 0 12px #d4af37;
 }
 
 .menu div{
@@ -37,16 +36,16 @@ body{
 }
 
 .conta{
-  margin-top:80px;
+  margin-top:70px;
   border:1px solid #d4af37;
   border-radius:12px;
   padding:20px;
-  background:#0d0d0d;
+  background:#080808;
 }
 
 .main{
   flex:1;
-  padding:25px;
+  padding:22px;
 }
 
 .top{
@@ -59,7 +58,7 @@ body{
   background:#d4af37;
   color:#000;
   border:0;
-  padding:14px 28px;
+  padding:12px 25px;
   border-radius:8px;
   font-weight:bold;
 }
@@ -68,38 +67,33 @@ body{
   display:grid;
   grid-template-columns:repeat(5,1fr);
   gap:15px;
-  margin-top:25px;
+  margin-top:18px;
 }
 
 .card{
-  background:#111;
+  background:#080808;
   border:1px solid #d4af37;
   border-radius:12px;
-  padding:18px;
+  padding:15px;
 }
 
 .valor{
-  font-size:20px;
+  font-size:19px;
   font-weight:bold;
-  margin-top:5px;
 }
 
 .green{color:#00ff66;}
 .red{color:red;}
 
-.painel{
-  margin-top:25px;
-  border:1px solid #d4af37;
-  border-radius:15px;
-  padding:20px;
-  background:#0b0b0b;
-}
-
 .controls{
+  margin-top:18px;
+  border:1px solid #d4af37;
+  border-radius:12px;
+  padding:15px;
+  background:#080808;
   display:flex;
-  gap:15px;
-  margin-bottom:15px;
   align-items:center;
+  gap:12px;
 }
 
 select{
@@ -108,11 +102,12 @@ select{
   border:1px solid #d4af37;
   padding:12px;
   border-radius:8px;
+  font-weight:bold;
 }
 
 button{
   border:0;
-  padding:12px 30px;
+  padding:12px 28px;
   border-radius:8px;
   font-weight:bold;
   cursor:pointer;
@@ -121,25 +116,26 @@ button{
 .ligar{background:#00b050;color:white;}
 .parar{background:#c00000;color:white;}
 
-.grid{
-  display:grid;
-  grid-template-columns:2fr 1fr;
-  gap:20px;
+.chart-box{
+  margin-top:18px;
+  border:1px solid #d4af37;
+  border-radius:14px;
+  background:#000;
+  overflow:hidden;
+  height:650px;
 }
 
-.chart-box{
-  border:1px solid #d4af37;
-  border-radius:12px;
-  overflow:hidden;
-  background:#000;
+#tvchart{
+  height:650px;
 }
 
 .table-box{
+  margin-top:18px;
   border:1px solid #d4af37;
   border-radius:12px;
   padding:15px;
-  background:#050505;
-  max-height:520px;
+  background:#080808;
+  max-height:170px;
   overflow:auto;
 }
 
@@ -149,7 +145,7 @@ table{
 }
 
 td{
-  padding:7px;
+  padding:6px;
 }
 
 .win{color:#00ff66;}
@@ -194,38 +190,36 @@ td{
     <div class="card">Derrotas<div class="valor red" id="loss">0</div></div>
   </div>
 
-  <div class="painel">
+  <div class="controls">
+    Ativo:
+    <select id="ativo" onchange="carregarGrafico()">
+      <option value="BINANCE:BTCUSDT">Bitcoin BTC/USDT</option>
+      <option value="BINANCE:ETHUSDT">Ethereum ETH/USDT</option>
+      <option value="BINANCE:BNBUSDT">BNB/USDT</option>
+      <option value="BINANCE:SOLUSDT">Solana SOL/USDT</option>
+    </select>
 
-    <div class="controls">
-      Ativo:
-      <select id="ativo" onchange="trocarAtivo()">
-        <option value="BINANCE:BTCUSDT">Bitcoin BTC/USDT</option>
-        <option value="BINANCE:ETHUSDT">Ethereum ETH/USDT</option>
-        <option value="BINANCE:BNBUSDT">BNB/USDT</option>
-        <option value="BINANCE:SOLUSDT">Solana SOL/USDT</option>
-      </select>
+    Tempo:
+    <select id="tempo" onchange="carregarGrafico()">
+      <option value="1">1 Minuto</option>
+      <option value="5">5 Minutos</option>
+    </select>
 
-      <button class="ligar" onclick="ligar()">▶ Ligar Robô</button>
-      <button class="parar" onclick="parar()">■ Parar</button>
+    <button class="ligar" onclick="ligar()">▶ Ligar Robô</button>
+    <button class="parar" onclick="parar()">■ Parar</button>
 
-      <span id="status">Aguardando...</span>
-    </div>
+    <span id="status">Aguardando...</span>
+  </div>
 
-    <div class="grid">
+  <div class="chart-box">
+    <div id="tvchart"></div>
+  </div>
 
-      <div class="chart-box">
-        <div id="tvchart" style="height:520px;"></div>
-      </div>
-
-      <div class="table-box">
-        <h2>Últimas Operações</h2>
-        <table>
-          <tbody id="historico"></tbody>
-        </table>
-      </div>
-
-    </div>
-
+  <div class="table-box">
+    <b>Últimas Operações</b>
+    <table>
+      <tbody id="historico"></tbody>
+    </table>
   </div>
 
 </div>
@@ -242,14 +236,15 @@ let loop = null;
 
 function carregarGrafico(){
   let ativo = document.getElementById("ativo").value;
+  let tempo = document.getElementById("tempo").value;
 
   document.getElementById("tvchart").innerHTML = "";
 
   new TradingView.widget({
     width: "100%",
-    height: 520,
+    height: 650,
     symbol: ativo,
-    interval: "1",
+    interval: tempo,
     timezone: "America/Sao_Paulo",
     theme: "dark",
     style: "1",
@@ -257,14 +252,12 @@ function carregarGrafico(){
     toolbar_bg: "#000000",
     enable_publishing: false,
     hide_top_toolbar: false,
+    hide_side_toolbar: false,
     hide_legend: false,
     save_image: false,
+    allow_symbol_change: false,
     container_id: "tvchart"
   });
-}
-
-function trocarAtivo(){
-  carregarGrafico();
 }
 
 function ligar(){
@@ -274,7 +267,7 @@ function ligar(){
   document.getElementById("status").innerText = "Robô analisando...";
   document.getElementById("statusLateral").innerText = "Rodando";
 
-  loop = setInterval(operar, 2500);
+  loop = setInterval(operar, 3000);
 }
 
 function parar(){
@@ -288,7 +281,7 @@ function parar(){
 function operar(){
   let ativoTexto = document.getElementById("ativo").options[document.getElementById("ativo").selectedIndex].text;
 
-  let entrada = Math.random() > 0.35;
+  let entrada = Math.random() > 0.45;
 
   if(!entrada){
     addHistorico(ativoTexto, "AGUARDAR", "neutro");
