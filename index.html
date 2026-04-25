@@ -2,29 +2,52 @@
 <html lang="pt-br">
 <head>
 <meta charset="UTF-8">
-<title>Robô Trader PRO</title>
+<title>Rayane Trader Bot</title>
 
 <style>
 body {
   margin:0;
   font-family:Arial;
-  background: linear-gradient(135deg,#1e0033,#3a0057);
+  background:#3a003f;
   color:white;
-  text-align:center;
+  display:flex;
 }
 
+/* MENU LATERAL */
+.sidebar {
+  width:220px;
+  background:#2b0030;
+  height:100vh;
+  padding:20px;
+}
+
+.sidebar h2 {
+  color:#ff2fa3;
+}
+
+.menu-item {
+  margin:15px 0;
+  cursor:pointer;
+}
+
+/* CONTEÚDO */
+.main {
+  flex:1;
+  padding:40px;
+}
+
+/* CARD */
 .card {
-  background:#1e1e2f;
-  width:380px;
-  margin:80px auto;
+  background:#2e2e3f;
+  width:420px;
+  margin:auto;
   padding:20px;
   border-radius:15px;
-  box-shadow:0 0 20px rgba(0,0,0,0.5);
 }
 
 .stats {
   display:flex;
-  justify-content:space-around;
+  justify-content:space-between;
   margin-top:15px;
 }
 
@@ -32,38 +55,29 @@ body {
   background:#111;
   padding:10px;
   border-radius:10px;
-  width:70px;
-}
-
-input, textarea {
-  width:90%;
-  padding:10px;
-  margin:10px;
-  border:none;
-  border-radius:8px;
+  width:80px;
+  text-align:center;
 }
 
 button {
   margin-top:10px;
-  padding:10px 20px;
+  padding:10px;
   border:none;
   border-radius:8px;
   font-weight:bold;
   cursor:pointer;
 }
 
-.start { background:#00ff88; color:black; }
-.stop { background:red; color:white; }
+.green { background:#00ff88; color:black; }
+.red { background:red; color:white; }
 
 .log {
   margin-top:20px;
   background:#111;
-  height:120px;
+  height:100px;
   overflow:auto;
   padding:10px;
   border-radius:10px;
-  text-align:left;
-  font-size:12px;
 }
 </style>
 
@@ -71,7 +85,19 @@ button {
 
 <body>
 
-<h1>🚀 Robô Trader PRO</h1>
+<div class="sidebar">
+<h2>RAY TRADER</h2>
+
+<div class="menu-item">📊 Dashboard</div>
+<div class="menu-item">🤖 Robôs</div>
+<div class="menu-item">📈 Sinais</div>
+<div class="menu-item">🎓 Aulas</div>
+<div class="menu-item">💎 Planos</div>
+</div>
+
+<div class="main">
+
+<h1>Dashboard</h1>
 
 <div class="card">
 
@@ -88,11 +114,8 @@ button {
 <div class="box">Loss<br><b id="loss">0</b></div>
 </div>
 
-<input id="ativo" placeholder="Digite o ativo">
-<textarea id="script" placeholder="Cole seu script aqui"></textarea>
-
-<button class="start" onclick="start()">Ligar Robô</button>
-<button class="stop" onclick="stop()">Desligar</button>
+<button class="green" onclick="start()">Ligar</button>
+<button class="red" onclick="stop()">Desligar</button>
 
 <h3 id="status">Aguardando...</h3>
 
@@ -100,8 +123,9 @@ button {
 
 </div>
 
-<script>
+</div>
 
+<script>
 let saldo = 1000;
 let wins = 0;
 let loss = 0;
@@ -109,30 +133,22 @@ let rodando = false;
 let loop;
 
 function start(){
-  let ativo = document.getElementById("ativo").value;
-  let script = document.getElementById("script").value;
-
-  if(!ativo || !script){
-    alert("Preencha tudo!");
-    return;
-  }
-
   rodando = true;
-  document.getElementById("status").innerText = "Robô ativo";
+  document.getElementById("status").innerText = "Rodando";
 
   loop = setInterval(()=>{
     if(!rodando) return;
 
-    let resultado = Math.random() > 0.4;
+    let r = Math.random() > 0.4;
 
-    if(resultado){
+    if(r){
       saldo += 10;
       wins++;
-      addLog("WIN +10");
+      addLog("WIN");
     } else {
       saldo -= 10;
       loss++;
-      addLog("LOSS -10");
+      addLog("LOSS");
     }
 
     atualizar();
@@ -151,9 +167,9 @@ function atualizar(){
   document.getElementById("lucro").innerText = saldo - 1000;
 
   let total = wins + loss;
-  let porcentagem = total ? ((wins/total)*100).toFixed(1) : 0;
+  let pct = total ? ((wins/total)*100).toFixed(1) : 0;
 
-  document.getElementById("win").innerText = porcentagem + "%";
+  document.getElementById("win").innerText = pct + "%";
   document.getElementById("wins").innerText = wins;
   document.getElementById("loss").innerText = loss;
 }
@@ -162,7 +178,6 @@ function addLog(msg){
   let log = document.getElementById("log");
   log.innerHTML = msg + "<br>" + log.innerHTML;
 }
-
 </script>
 
 </body>
